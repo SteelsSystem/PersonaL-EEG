@@ -1,0 +1,8 @@
+{
+  "name": "Personal-EEG GreyHighlist",
+  "description": "AXIOM 3D Hex-Reflex GLSL Profiler, SY4-EEG BlockMind cognitive load dashboard with RGB biometric sync, Rust/SQLx/OpenAPI codex, SHA-256 script verifier, and local SPECT Room telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

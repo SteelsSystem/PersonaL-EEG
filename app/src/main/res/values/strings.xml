@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">SY4-EEG BlockMind</string>
+    <string name="header_title">SY4-EEG // AXIOM HEX-REFLEX</string>
+    <string name="header_subtitle">LITTERAE • SATIS • EPISTULA • OSA A-X- INF00 • BLOCKMIND</string>
+    <string name="tab_tunnel">HEX TUNNEL</string>
+    <string name="tab_biometrics">EEG &amp; RGB</string>
+    <string name="tab_codex">CODEX &amp; SHA</string>
+    <string name="tab_spect">SPECT DB</string>
+    <string name="btn_inject_fracture">Inject Fracture</string>
+    <string name="btn_repackage_heal">Repackage &amp; Heal</string>
+    <string name="btn_run_benchmark">Run 10s Benchmark &amp; Self-Heal</string>
+    <string name="btn_verify_sha256">Clean Script &amp; Verify SHA-256</string>
+    <string name="btn_capture_spect">Log Inverted SPECT Snapshot</string>
+</resources>

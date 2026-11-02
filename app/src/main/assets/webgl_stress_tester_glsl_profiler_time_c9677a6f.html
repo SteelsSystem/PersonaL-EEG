@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AXIOM // Hexagonal Reflex & Self-Heal GLSL Profiler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap');
+
+    :root {-[|]#
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff0055;
+      --neon-amber: #ffaa00;
+      --neon-green: #00ff9d;
+      --neon-purple: #b829ff;
+      --bg-dark: #05070b;
+    }
+    ring-|
+    body| {
+      background-color: var(--bg-dark);
+      font-family: 'JetBrains Mono', monospace;
+      color: #cbd5e1;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .font-hud {
+      font-family: 'Orbitron', monospace;
+    }
+
+    /* Technical scanline overlay */
+    .scanlines {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.24) 50%,
+        rgba(0, 0, 0, 0.24)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(10, 15, 25, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-cyan);
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #131c2e;
+      height: 5px;
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--neon-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--neon-cyan);
+      transition: transform 0.1s, background-color 0.2s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Glass HUD panels */
+    .hud-panel {
+      background: rgba(8, 12, 20, 0.84);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 243, 255, 0.18);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.75), inset 0 0 14px rgba(0, 243, 255, 0.04);
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(0, 255, 157, 0.35); }
+      50% { border-color: rgba(0, 243, 255, 0.85); }
+    }
+    .healing-active {
+      animation: pulse-border 1.2s infinite;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen flex flex-col justify-between m-0 p-0 select-none">
+
+  <!-- Interactive 3D WebGL Canvas Layer -->
+  <div id="canvas-container" class="absolute inset-0 z-0 bg-black cursor-crosshair">
+    <canvas id="glcanvas" class="w-full h-full block"></canvas>
+  </div>
+
+  <!-- Scanline texture -->
+  <div class="scanlines absolute inset-0 z-10 pointer-events-none"></div>
+
+  <!-- TOP HEADER & PERFORMANCE TELEMETRY BAR -->
+  <header class="relative z-20 flex flex-wrap items-center justify-between p-2.5 px-4 hud-panel border-b border-t-0 border-x-0">
+    <div class="flex items-center gap-3">
+      <div class="relative flex items-center justify-center w-8 h-8 rounded border border-cyan-400/40 bg-cyan-950/40">
+        <span id="core-pulse-ring" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping absolute"></span>
+        <span id="core-pulse-dot" class="w-2 h-2 rounded-full bg-cyan-400"></span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-hud text-xs sm:text-sm md:text-base font-extrabold tracking-widest text-cyan-400">
+            AXIOM // HEX-REFLEX ARCHITECTURE
+          </h1>
+          <span id="gl-version-badge" class="text-[9px] bg-cyan-950/90 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-700/60 font-mono">WEBGL2</span>
+          <span id="heal-status-badge" class="text-[9px] bg-emerald-950/90 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-600/50 font-mono">SELF-HEAL: NOMINAL</span>
+        </div>
+        <p class="text-[9px] sm:text-[10px] text-slate-400 tracking-wider">
+          HEXAGONAL LATTICE • REFLEX RADIAL CORE • MAGNETIC / ANTI-MAGNETIC BOUNDARY • AUTO-REPAIR
+        </p>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Quick View & Header Actions -->
+    <div class="flex items-center gap-2 sm:gap-3 text-xs mt-2 lg:mt-0 w-full lg:w-auto justify-between lg:justify-end">
+      <div class="bg-black/50 px-2.5 py-1 rounded border border-slate-800 flex items-center gap-2.5">
+        <div>
+          <div class="text-[8px] uppercase tracking-wider text-slate-400">FPS</div>
+          <div class="font-hud font-bold text-sm sm:text-base text-emerald-400" id="fps-val">60</div>
+        </div>
+        <div class="w-px h-5 bg-slate-800"></div>
+        <div>
+          <div class="text-[8px] uppercase tracking-wider text-slate-400">Frame</div>
+          <div class="font-hud font-bold text-sm sm:text-base text-cyan-400" id="ms-val">16.6<span class="text-[10px] font-normal text-cyan-600">ms</span></div>
+        </div>
+        <div class="w-px h-5 bg-slate-800"></div>
+        <div>
+          <div class="text-[8px] uppercase tracking-wider text-slate-400">Integrity</div>
+          <div class="font-hud font-bold text-sm sm:text-base text-purple-400" id="integrity-val">100%</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button id="btn-open-code" class="px-2.5 py-1.5 rounded text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-600/50 transition">
+          GLSL Code
+        </button>
+        <button id="btn-save-png" class="px-2.5 py-1.5 rounded text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-600/50 transition">
+          Save PNG [P]
+        </button>
+        <button id="btn-toggle-ui" class="px-2.5 py-1.5 rounded text-[11px] bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+          HUD [H]
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN FLOATING INTERFACE (HUD) -->
+  <div id="main-hud" class="relative z-20 flex-1 pointer-events-none p-2.5 sm:p-4 flex flex-col md:flex-row justify-between gap-3 overflow-hidden transition-opacity duration-300">
+    
+    <!-- LEFT PANEL: Architecture & Self-Heal Controls -->
+    <aside class="pointer-events-auto w-full md:w-80 lg:w-96 flex flex-col gap-2.5 overflow-y-auto max-h-[82vh] pr-1">
+      
+      <!-- Architecture Mode Preset Switcher -->
+      <div class="hud-panel p-3 rounded-lg">
+        <div class="flex items-center justify-between mb-1.5">
+          <label class="text-[10px] font-bold tracking-wider uppercase text-cyan-400 font-hud">Simulation Architecture</label>
+          <span class="text-[9px] text-emerald-400 font-mono" id="shader-complexity">INFINITE HEX-LATTICE</span>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 mb-2">
+          <button data-shader="hex_reflex" class="preset-btn px-2 py-1.5 rounded text-[11px] font-semibold bg-cyan-950/90 text-cyan-300 border border-cyan-400/60 hover:bg-cyan-900/60 transition active:scale-95 text-center">
+            Hex Reflex Core
+          </button>
+          <button data-shader="fractal" class="preset-btn px-2 py-1.5 rounded text-[11px] font-semibold bg-slate-900/80 text-slate-400 border border-slate-800 hover:bg-slate-800/60 transition active:scale-95 text-center">
+            Mandelbulb 3D
+          </button>
+          <button data-shader="voronoi" class="preset-btn px-2 py-1.5 rounded text-[11px] font-semibold bg-slate-900/80 text-slate-400 border border-slate-800 hover:bg-slate-800/60 transition active:scale-95 text-center">
+            Voronoi Lattice
+          </button>
+        </div>
+        <p id="shader-desc" class="text-[10px] leading-relaxed text-slate-400 bg-black/40 p-2 rounded border border-slate-900">
+          3D Hexagonal domain repetition with radial "Reflex" light density, divergence-free magnetic compression, sine-modulated anti-magnetic blocking boundary, and autonomous lattice self-healing.
+        </p>
+      </div>
+
+      <!-- Self-Heal & Repackage Control Unit -->
+      <div id="self-heal-panel" class="hud-panel p-3 rounded-lg border-emerald-500/30 flex flex-col gap-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <span class="text-[10px] font-bold tracking-wider uppercase text-emerald-400 font-hud flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Repackage & Self-Heal Matrix
+          </span>
+          <span class="text-[10px] font-mono text-emerald-300" id="entropy-readout">Entropy: 0.00</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 my-0.5">
+          <button id="btn-perturb" class="py-2 px-2 rounded text-[11px] font-hud font-bold bg-amber-950/70 hover:bg-amber-900/80 text-amber-300 border border-amber-500/50 transition active:scale-95">
+            ⚡ Inject Fracture
+          </button>
+          <button id="btn-repackage" class="py-2 px-2 rounded text-[11px] font-hud font-bold bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-400/60 shadow-lg shadow-emerald-950/50 transition active:scale-95">
+            ⟳ Repackage & Heal
+          </button>
+        </div>
+
+        <!-- Self-Heal Recovery Rate Slider -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Autonomous Self-Heal Rate</span>
+            <span class="text-emerald-400 font-mono" id="val-healrate">0.65 /s</span>
+          </div>
+          <input id="slider-healrate" type="range" min="0.05" max="2.5" step="0.05" value="0.65" class="w-full">
+        </div>
+
+        <!-- Engine-Level Adaptive Self-Heal Governor -->
+        <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px]">
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300" title="Automatically scales raymarch steps and resolution to repair framerate drops">
+            <input type="checkbox" id="check-auto-governor" checked class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0">
+            <span>Engine Auto-Repair Governor (FPS Guard)</span>
+          </label>
+          <span id="governor-state" class="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded">ACTIVE</span>
+        </div>
+      </div>
+
+      <!-- Hex-Reflex & Magnetic Field Parameters -->
+      <div class="hud-panel p-3 rounded-lg flex flex-col gap-2.5">
+        <div class="text-[10px] font-bold tracking-wider uppercase text-cyan-400 font-hud border-b border-slate-800 pb-1 flex justify-between">
+          <span>Field & Physics Parameters</span>
+          <span class="text-slate-400 text-[9px]" id="current-res-label">1.00x Scale</span>
+        </div>
+
+        <!-- Hexagonal Domain Scale -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Hexagonal Lattice Scale</span>
+            <span class="text-cyan-400 font-mono" id="val-hexscale">1.80</span>
+          </div>
+          <input id="slider-hexscale" type="range" min="0.6" max="4.0" step="0.1" value="1.8" class="w-full">
+        </div>
+
+        <!-- Reflex Circular Light Density -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Reflex Radial Light Density</span>
+            <span class="text-amber-400 font-mono" id="val-reflex">1.45</span>
+          </div>
+          <input id="slider-reflex" type="range" min="0.1" max="3.5" step="0.05" value="1.45" class="w-full">
+        </div>
+
+        <!-- Magnetic Pressure (Divergence-Free Vector Curl) -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Magnetic Compressive Pressure</span>
+            <span class="text-purple-400 font-mono" id="val-magpressure">1.20</span>
+          </div>
+          <input id="slider-magpressure" type="range" min="0.0" max="3.0" step="0.05" value="1.20" class="w-full">
+        </div>
+
+        <!-- Anti-Magnet Boundary Layer Pulse -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Anti-Magnet Blocking Boundary</span>
+            <span class="text-pink-400 font-mono" id="val-antimag">0.85</span>
+          </div>
+          <input id="slider-antimag" type="range" min="0.0" max="2.5" step="0.05" value="0.85" class="w-full">
+        </div>
+
+        <!-- Max Raymarching Steps -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Raymarch Depth / Iterations</span>
+            <span class="text-cyan-300 font-mono" id="val-steps">96</span>
+          </div>
+          <input id="slider-steps" type="range" min="24" max="256" step="8" value="96" class="w-full">
+        </div>
+
+        <!-- Internal Render Scale -->
+        <div>
+          <div class="flex justify-between text-[11px] mb-0.5">
+            <span class="text-slate-300">Internal Render Resolution</span>
+            <span class="text-cyan-400 font-mono" id="val-renderscale">1.00x</span>
+          </div>
+          <input id="slider-renderscale" type="range" min="0.25" max="2.5" step="0.25" value="1.0" class="w-full">
+        </div>
+
+        <!-- Bottom Toggles -->
+        <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between">
+          <label class="flex items-center gap-2 cursor-pointer text-[11px] text-slate-300">
+            <input type="checkbox" id="check-aa" class="w-3.5 h-3.5 rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+            <span>4-Tap Super-Sample AA</span>
+          </label>
+
+          <button id="btn-pause" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold rounded text-slate-200 border border-slate-700 transition">
+            Pause [Space]
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT PANEL: Real-time Telemetry, Self-Heal Log & Benchmark -->
+    <div class="pointer-events-auto w-full md:w-80 lg:w-96 flex flex-col gap-2.5 mt-auto md:mt-0">
+      
+      <!-- Real-time Rolling Frametime & Lattice Stability Graph -->
+      <div class="hud-panel p-3 rounded-lg">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-200 font-hud">Telemetry & Self-Heal Stream</span>
+          </div>
+          <span class="text-[9px] font-mono text-cyan-400" id="graph-scale-txt">Cyan: ms | Green: Integrity</span>
+        </div>
+        
+        <!-- Canvas for direct 2D dual plot -->
+        <div class="relative w-full h-28 bg-black/60 rounded border border-slate-800 overflow-hidden">
+          <canvas id="graphcanvas" class="w-full h-full block"></canvas>
+          <div class="absolute top-1 left-1.5 text-[8px] font-mono text-slate-500 pointer-events-none">33.3ms (30 FPS)</div>
+          <div class="absolute top-11 left-1.5 text-[8px] font-mono text-slate-500 pointer-events-none">16.6ms (60 FPS)</div>
+          <div class="absolute bottom-1 left-1.5 text-[8px] font-mono text-emerald-500/80 pointer-events-none">Lattice Integrity %</div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-slate-800/80 text-center font-mono">
+          <div class="bg-slate-900/60 p-1.5 rounded">
+            <div class="text-[8px] text-slate-400">FPS LOW / HIGH</div>
+            <div class="text-[11px] text-slate-200 font-bold"><span id="stat-fps-low" class="text-rose-400">0</span> / <span id="stat-fps-high" class="text-cyan-400">0</span></div>
+          </div>
+          <div class="bg-slate-900/60 p-1.5 rounded">
+            <div class="text-[8px] text-slate-400">COMPUTE LOAD</div>
+            <div class="text-[11px] text-amber-400 font-bold" id="stat-compute-load">0 GFLOP/eq</div>
+          </div>
+          <div class="bg-slate-900/60 p-1.5 rounded">
+            <div class="text-[8px] text-slate-400">HEAL CYCLES</div>
+            <div class="text-[11px] text-emerald-400 font-bold" id="stat-heal-cycles">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Self-Heal Event Diagnostic Log -->
+      <div class="hud-panel p-2.5 rounded-lg text-[10px] font-mono">
+        <div class="flex justify-between items-center text-slate-400 border-b border-slate-800 pb-1 mb-1.5">
+          <span class="font-hud text-[9px] text-cyan-400 uppercase">Autonomous Repair Log</span>
+          <span id="gpu-info" class="truncate max-w-[150px] text-[9px] text-slate-500">WebGL Hardware</span>
+        </div>
+        <div id="heal-log" class="h-20 overflow-y-auto space-y-1 text-slate-300 pr-1">
+          <div class="text-emerald-400">[SYS] Hexagonal Reflex shader packaged & verified.</div>
+          <div class="text-cyan-300">[MAG] Divergence-free magnetic vector field online.</div>
+        </div>
+      </div>
+
+      <!-- Automated Stress Benchmark Module -->
+      <div class="hud-panel p-3 rounded-lg flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-pink-400 font-hud">Automated Stress Suite</span>
+          <span class="text-[9px] bg-pink-950/60 text-pink-300 px-1.5 py-0.5 rounded border border-pink-900/80">10s SWEEP</span>
+        </div>
+        <button id="btn-benchmark" class="w-full py-2 rounded font-hud text-[11px] tracking-wider font-extrabold bg-gradient-to-r from-pink-600 to-purple-700 hover:from-pink-500 hover:to-purple-600 text-white shadow-lg shadow-pink-950/50 transition active:scale-98">
+          RUN 10S BENCHMARK & SELF-HEAL TEST
+        </button>
+        
+        <div id="bench-progress-wrap" class="hidden flex-col gap-1 mt-0.5">
+          <div class="flex justify-between text-[9px] font-mono">
+            <span class="text-pink-400" id="bench-status-txt">Profiling Hex-Reflex pipeline...</span>
+            <span class="text-slate-300" id="bench-time-txt">0.0s / 10s</span>
+          </div>
+          <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+            <div id="bench-progress-fill" class="bg-pink-500 h-full w-0 transition-all duration-100"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 1: LIVE GLSL SHADER CODE INSPECTOR -->
+  <div id="code-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md">
+    <div class="hud-panel max-w-3xl w-full p-4 sm:p-6 rounded-xl border border-cyan-500/40 flex flex-col max-h-[88vh] shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-cyan-500/20">
+        <div>
+          <h2 class="font-hud text-sm sm:text-base font-bold text-cyan-400 tracking-wider">GLSL FRAGMENT SHADER // LIVE SOURCE</h2>
+          <p class="text-[10px] text-slate-400">Hexagonal Domain Repetition + Reflex Radial Density + Magnetic Curl + Self-Heal</p>
+        </div>
+        <button id="btn-close-code" class="text-slate-400 hover:text-white font-mono text-sm px-2 py-1">✕</button>
+      </div>
+
+      <pre id="glsl-code-display" class="my-3 p-3 bg-black/80 rounded-lg border border-slate-800 text-[10px] sm:text-xs font-mono text-cyan-200 overflow-y-auto flex-1 select-all whitespace-pre-wrap leading-relaxed"></pre>
+
+      <div class="flex justify-between items-center pt-2">
+        <span class="text-[10px] text-slate-400">Ready for local GLSL / Shadertoy / WebGL environments</span>
+        <div class="flex gap-2">
+          <button id="btn-copy-glsl" class="px-4 py-2 rounded text-xs font-hud font-bold bg-cyan-500 hover:bg-cyan-400 text-black transition">
+            COPY GLSL SHADER
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: BENCHMARK DIAGNOSTIC REPORT OVERLAY -->
+  <div id="benchmark-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div class="hud-panel max-w-xl w-full p-6 rounded-xl border border-cyan-500/40 relative shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-cyan-500/20">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 bg-pink-500 rounded-sm transform rotate-45"></div>
+          <h2 class="font-hud text-base sm:text-lg font-bold text-white tracking-wider">BENCHMARK & SELF-HEAL REPORT</h2>
+        </div>
+        <button id="btn-close-modal" class="text-slate-400 hover:text-white font-mono text-sm px-2 py-1">✕</button>
+      </div>
+
+      <div class="my-4 grid grid-cols-3 gap-2.5 text-center">
+        <div class="bg-black/40 p-3 rounded-lg border border-slate-800">
+          <div class="text-[9px] text-slate-400 font-hud">MEDIAN (P50)</div>
+          <div class="text-lg font-extrabold text-cyan-400 font-mono mt-0.5" id="report-p50">0.0 ms</div>
+          <div class="text-[9px] text-slate-500 mt-0.5" id="report-p50-fps">~0 FPS</div>
+        </div>
+        <div class="bg-black/40 p-3 rounded-lg border border-slate-800">
+          <div class="text-[9px] text-slate-400 font-hud">95TH PERCENTILE</div>
+          <div class="text-lg font-extrabold text-amber-400 font-mono mt-0.5" id="report-p95">0.0 ms</div>
+          <div class="text-[9px] text-slate-500 mt-0.5" id="report-p95-fps">~0 FPS</div>
+        </div>
+        <div class="bg-black/40 p-3 rounded-lg border border-slate-800">
+          <div class="text-[9px] text-slate-400 font-hud">99TH PERCENTILE</div>
+          <div class="text-lg font-extrabold text-rose-500 font-mono mt-0.5" id="report-p99">0.0 ms</div>
+          <div class="text-[9px] text-slate-500 mt-0.5" id="report-p99-fps">~0 FPS</div>
+        </div>
+      </div>
+
+      <div class="space-y-1.5 text-xs font-mono bg-black/60 p-3.5 rounded-lg border border-slate-800/80 mb-5">
+        <div class="flex justify-between"><span class="text-slate-400">Total Frames Sampled:</span><span class="text-white font-bold" id="report-frames">0</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Dropped Frames (>33.3ms):</span><span class="text-amber-400" id="report-drops">0 (0%)</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Self-Heal Lattice Recovery:</span><span class="text-emerald-400 font-bold" id="report-heal-efficiency">100% Verified</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Average Framerate:</span><span class="text-emerald-400 font-bold" id="report-avg-fps">0 FPS</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Architecture Compute Score:</span><span class="text-cyan-300 font-bold" id="report-score">0 PTS</span></div>
+      </div>
+
+      <div class="flex justify-end gap-3">
+        <button id="btn-copy-report" class="px-4 py-2 rounded text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          Copy Telemetry Report
+        </button>
+        <button id="btn-done-modal" class="px-5 py-2 rounded text-xs font-hud font-bold bg-cyan-500 hover:bg-cyan-400 text-black transition">
+          CONFIRM
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION TOAST -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-16 opacity-0 transition-all duration-300 bg-cyan-950 border border-cyan-400 text-cyan-200 text-xs px-4 py-2.5 rounded-lg shadow-xl font-mono">
+    Notification
+  </div>
+
+  <script>
+    /* =====================================================================
+       GLSL VERTEX & FRAGMENT SHADERS (WITH HEX-REFLEX & SELF-HEAL)
+       ===================================================================== */
+    const VS_SOURCE = `
+      attribute vec2 a_position;
+      varying vec2 v_uv;
+      void main() {
+        v_uv = (a_position + 1.0) * 0.5;
+        gl_Position = vec4(a_position, 0.0, 1.0);
+      }
+    `;
+
+    const FS_HEADER = `
+      precision highp float;
+      varying vec2 v_uv;
+      uniform vec2 u_resolution;
+      uniform float u_time;
+      uniform vec2 u_mouse;
+      uniform int u_max_steps;
+      uniform float u_hex_scale;
+      uniform float u_reflex_density;
+      uniform float u_mag_pressure;
+      uniform float u_antimag_pulse;
+      uniform float u_perturbation;
+      uniform float u_heal_wave;
+      uniform bool u_fxaa;
+    `;
+
+    // PRIMARY ARCHITECTURE: Hexagonal Domain Repetition + Reflex Density + Magnetic/Anti-Magnetic Boundary + Self-Heal
+    const FS_HEX_REFLEX = FS_HEADER + `
+      // ---- TIME: compile-time rate constants (folded by the GLSL compiler) ----
+      const float TIME_MAG_Z_DRIFT   = 0.4;   // magnetic field z-drift
+      const float TIME_MAG_VX        = 0.7;   // magnetic vx phase rate
+      const float TIME_MAG_VY        = 0.8;   // magnetic vy phase rate
+      const float TIME_MAG_VZ        = 0.6;   // magnetic vz phase rate
+      const float TIME_FRACTURE_A    = 8.0;   // fracture noise rate (x term)
+      const float TIME_FRACTURE_B    = 7.0;   // fracture noise rate (y term)
+      const float TIME_Z_SCROLL      = 0.7;   // lattice scroll speed along z
+      const float TIME_BREATH        = 2.4;   // anti-magnet boundary breathing
+      const float TIME_RING          = 1.8;   // z-ring thickness pulse
+      const float TIME_CAM_YAW       = 0.2;   // autonomous camera yaw drift
+      const float TIME_CAM_PITCH     = 0.15;  // autonomous camera pitch drift
+      const float Z_PERIOD           = 1.6;   // lattice repeat length along z
+
+      // ---- Per-frame values: u_time is uniform, so compute once in main(),
+      // not once per raymarch step per pixel. ----
+      float g_magZ, g_magVx, g_magVy, g_magVz;
+      float g_fracA, g_fracB, g_zScroll, g_breath, g_ring;
+      float g_camYaw, g_camPitch;
+
+      void initTime() {
+        g_magZ   = u_time * TIME_MAG_Z_DRIFT;
+        g_magVx  = u_time * TIME_MAG_VX;
+        g_magVy  = u_time * TIME_MAG_VY;
+        g_magVz  = u_time * TIME_MAG_VZ;
+        g_fracA  = u_time * TIME_FRACTURE_A;
+        g_fracB  = u_time * TIME_FRACTURE_B;
+        g_zScroll = u_time * TIME_Z_SCROLL;
+        g_breath = u_time * TIME_BREATH;
+        g_ring   = u_time * TIME_RING;
+        g_camYaw   = sin(u_time * TIME_CAM_YAW) * 0.25;
+        g_camPitch = cos(u_time * TIME_CAM_PITCH) * 0.15;
+      }
+
+      // 2D rotation matrix helper
+      mat2 rot2D(float a) {
+        float s = sin(a), c = cos(a);
+        return mat2(c, -s, s, c);
+      }
+
+      // Divergence-free 3D magnetic vector field approximation (Curl-like flow)
+      vec3 magneticVectorField(vec3 p, float t) {
+        vec3 q = p * 1.35 + vec3(0.0, 0.0, g_magZ);
+        float vx = sin(q.y * 2.1 + t) - cos(q.z * 1.9 - g_magVx);
+        float vy = sin(q.z * 2.1 - t) - cos(q.x * 1.9 + g_magVy);
+        float vz = sin(q.x * 2.1 + g_magVz) - cos(q.y * 1.9 - t);
+        return vec3(vx, vy, vz) * u_mag_pressure * 0.14;
+      }
+
+      // Hexagonal 2D domain repetition returning local hex coordinates (xy) and cell ID (zw)
+      vec4 hexDomainRepetition(vec2 p) {
+        const vec2 s = vec2(1.0, 1.7320508);
+        vec4 hC = floor(vec4(p, p - vec2(0.5, 1.0)) / s.xyxy) + 0.5;
+        vec4 h = vec4(p - hC.xy * s, p - (hC.zw + 0.5) * s);
+        return dot(h.xy, h.xy) < dot(h.zw, h.zw) 
+               ? vec4(h.xy, hC.xy) 
+               : vec4(h.zw, hC.zw + 0.5);
+      }
+
+      // Exact Signed Distance to a 2D Hexagon
+      float sdHexagon2D(vec2 p, float r) {
+        const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
+        p = abs(p);
+        p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
+        p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
+        return length(p) * sign(p.y);
+      }
+
+      // Scene Distance Estimator & Volumetric Reflex Field Evaluator
+      float evaluateHexReflexLattice(vec3 pos, out float reflexCore, out float boundaryShield, out float healGlow) {
+        // 1. Apply Divergence-Free Magnetic Vector Field compression
+        vec3 magOffset = magneticVectorField(pos, u_time);
+        vec3 p = pos + magOffset;
+
+        // 2. Apply Fracture / Perturbation (decays automatically via Self-Heal)
+        if (u_perturbation > 0.001) {
+          float fractureNoise = sin(p.x * 9.0 + g_fracA) * cos(p.y * 9.0 - g_fracB) * sin(p.z * 9.0);
+          p += fractureNoise * u_perturbation * 0.28;
+        }
+
+        // 3. Scale into Hexagonal Lattice Domain
+        vec2 hexP = p.xy * u_hex_scale;
+        vec4 hexCell = hexDomainRepetition(hexP);
+        vec2 localXY = hexCell.xy;
+        vec2 cellID = hexCell.zw;
+
+        // Longitudinal Z-axis repetition with cell phase offset
+        float cellPhase = fract(sin(dot(cellID, vec2(12.9898, 78.233))) * 43758.5453);
+        float localZ = mod(p.z + g_zScroll + cellPhase * Z_PERIOD, Z_PERIOD) - 0.5 * Z_PERIOD;
+
+        // 4. Anti-Magnetic Pressure: Sine-Wave Modulated Shifting Blocking Boundary Layer
+        float breathWave = sin(g_breath + length(cellID) * 0.85 - pos.z * 1.2);
+        float antiMagRadius = 0.34 + 0.07 * breathWave * u_antimag_pulse;
+
+        // Hexagonal prism shell walls (hollow core for Reflex light)
+        float hexDist2D = abs(sdHexagon2D(localXY, antiMagRadius)) - 0.028;
+        
+        // Interlocking hexagonal rings along Z
+        float zRingDist = abs(localZ) - (0.18 + 0.06 * sin(g_ring + cellPhase * 6.28));
+        float latticeSDF = max(hexDist2D, zRingDist);
+
+        // Secondary infinite internal sub-hex struts
+        float innerStruts = abs(sdHexagon2D(localXY * 2.2, 0.25)) - 0.012;
+        latticeSDF = min(latticeSDF, max(innerStruts, abs(localZ) - 0.08));
+
+        // 5. "Reflex" Circular/Radial Light Core Density inside each hexagonal cell
+        float radialDist = length(vec3(localXY, localZ * 0.85));
+        reflexCore = exp(-radialDist * radialDist * 18.0) * u_reflex_density;
+
+        // 6. Shifting Anti-Magnetic Boundary Layer Shell
+        float shieldShell = abs(radialDist - antiMagRadius * 0.85);
+        boundaryShield = smoothstep(0.09, 0.0, shieldShell) * u_antimag_pulse * (0.6 + 0.4 * breathWave);
+
+        // 7. Repackage & Self-Heal Sweeping Wave
+        float waveRadius = length(pos.xy) - u_heal_wave * 6.5;
+        healGlow = exp(-waveRadius * waveRadius * 4.5) * step(0.01, u_heal_wave) * step(u_heal_wave, 1.4);
+
+        return latticeSDF / u_hex_scale;
+      }
+
+      vec3 renderHexReflex(vec2 uv) {
+        vec2 p = (uv * 2.0 - 1.0);
+        p.x *= u_resolution.x / u_resolution.y;
+
+        // Orbital camera controlled by mouse or smooth autonomous drift
+        float yaw = (u_mouse.x / max(u_resolution.x, 1.0) - 0.5) * 3.14 + g_camYaw;
+        float pitch = (u_mouse.y / max(u_resolution.y, 1.0) - 0.5) * 1.6 + g_camPitch;
+
+        vec3 ro = vec3(0.0, 0.0, -2.5);
+        vec3 rd = normalize(vec3(p, 1.65));
+        rd.yz *= rot2D(pitch);
+        rd.xy *= rot2D(yaw);
+
+        vec3 accumColor = vec3(0.01, 0.015, 0.03);
+        float t = 0.15;
+        float tmax = 9.0;
+
+        // Volumetric & SDF hybrid raymarching loop
+        for (int i = 0; i < 256; i++) {
+          if (i >= u_max_steps || t > tmax) break;
+
+          vec3 pos = ro + rd * t;
+          float reflexCore = 0.0;
+          float boundaryShield = 0.0;
+          float healGlow = 0.0;
+
+          float d = evaluateHexReflexLattice(pos, reflexCore, boundaryShield, healGlow);
+
+          // Local step modulation based on magnetic pressure & volumetric density
+          float stepSize = max(abs(d) * 0.58, 0.018);
+
+          // Accumulate "Reflex" Circular Light Core (Golden-Cyan Plasma)
+          vec3 reflexCol = mix(vec3(0.0, 0.95, 1.0), vec3(1.0, 0.75, 0.2), clamp(reflexCore * 0.6, 0.0, 1.0));
+          accumColor += reflexCol * reflexCore * stepSize * 2.4 * exp(-t * 0.28);
+
+          // Accumulate Anti-Magnet Shifting Boundary Layer (Magenta / Violet barrier)
+          vec3 shieldCol = mix(vec3(0.95, 0.05, 0.45), vec3(0.55, 0.15, 1.0), 0.5 + 0.5 * sin(pos.z * 2.0 + u_time));
+          accumColor += shieldCol * boundaryShield * stepSize * 3.2 * exp(-t * 0.3);
+
+          // Accumulate Perturbation Fracture sparks (Amber/Red warning glow)
+          if (u_perturbation > 0.01) {
+            accumColor += vec3(1.0, 0.25, 0.1) * u_perturbation * 0.012 * exp(-abs(d) * 20.0);
+          }
+
+          // Accumulate Repackage & Self-Heal Wave (Emerald Crystalline Repair Wave)
+          if (healGlow > 0.001) {
+            accumColor += vec3(0.0, 1.0, 0.65) * healGlow * stepSize * 5.5;
+          }
+
+          // Surface hit on Hexagonal Crystalline Wall
+          if (abs(d) < 0.004) {
+            float depthFade = exp(-t * 0.35);
+            vec3 wallColor = mix(vec3(0.08, 0.55, 0.85), vec3(0.0, 1.0, 0.65), clamp(healGlow * 2.0, 0.0, 1.0));
+            accumColor += wallColor * 0.22 * depthFade;
+          }
+
+          t += stepSize;
+        }
+
+        // Tone mapping & subtle vignette
+        accumColor = accumColor / (1.0 + accumColor * 0.55);
+        accumColor = pow(clamp(accumColor, 0.0, 1.0), vec3(0.88));
+        return accumColor;
+      }
+
+      void main() {
+        initTime();
+        vec3 col = vec3(0.0);
+        if (u_fxaa) {
+          vec2 off = vec2(0.35) / u_resolution;
+          col += renderHexReflex(v_uv + vec2(-off.x, -off.y)) * 0.25;
+          col += renderHexReflex(v_uv + vec2( off.x, -off.y)) * 0.25;
+          col += renderHexReflex(v_uv + vec2(-off.x,  off.y)) * 0.25;
+          col += renderHexReflex(v_uv + vec2( off.x,  off.y)) * 0.25;
+        } else {
+          col = renderHexReflex(v_uv);
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    // Preset 2: Raymarched 3D Mandelbulb Fractal (with Perturbation & Heal support)
+    const FS_FRACTAL = FS_HEADER + `
+      float mandelbulbSDF(vec3 pos, out vec4 outColor) {
+        vec3 z = pos;
+        float dr = 1.0;
+        float r = 0.0;
+        float power = (8.0 + sin(u_time * 0.3) * 1.5) + u_perturbation * 2.5;
+
+        for (int i = 0; i < 8; i++) {
+          r = length(z);
+          if (r > 3.2) break;
+          float theta = acos(z.z / max(r, 0.0001));
+          float phi = atan(z.y, z.x);
+          dr = pow(r, power - 1.0) * power * dr + 1.0;
+          float zr = pow(r, power);
+          theta *= power;
+          phi *= power;
+          z = zr * vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta)) + pos;
+        }
+        outColor = vec4(clamp(length(z) * 0.25, 0.0, 1.0), clamp(abs(z.y)*0.35, 0.0, 1.0), clamp(dr * 0.03, 0.0, 1.0), 1.0);
+        return 0.5 * log(max(r, 1.0001)) * r / dr;
+      }
+
+      vec3 calcNormal(vec3 p) {
+        const float eps = 0.0015;
+        vec4 d0;
+        float d = mandelbulbSDF(p, d0);
+        return normalize(vec3(
+          mandelbulbSDF(p + vec3(eps, 0.0, 0.0), d0) - d,
+          mandelbulbSDF(p + vec3(0.0, eps, 0.0), d0) - d,
+          mandelbulbSDF(p + vec3(0.0, 0.0, eps), d0) - d
+        ));
+      }
+
+      void main() {
+        vec2 p = (v_uv * 2.0 - 1.0);
+        p.x *= u_resolution.x / u_resolution.y;
+        float angleY = (u_mouse.x / max(u_resolution.x, 1.0) - 0.5) * 6.28 + u_time * 0.18;
+        float angleX = (u_mouse.y / max(u_resolution.y, 1.0) - 0.5) * 1.8;
+        float camDist = 2.7 / max(u_hex_scale * 0.55, 0.4);
+
+        vec3 ro = vec3(camDist * cos(angleY) * cos(angleX), camDist * sin(angleX), camDist * sin(angleY) * cos(angleX));
+        vec3 ww = normalize(-ro);
+        vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
+        vec3 vv = normalize(cross(uu, ww));
+        vec3 rd = normalize(p.x * uu + p.y * vv + 1.5 * ww);
+
+        vec3 col = vec3(0.02, 0.03, 0.06);
+        float t = 0.4;
+        vec4 trap;
+        bool hit = false;
+
+        for (int i = 0; i < 256; i++) {
+          if (i >= u_max_steps || t > 5.0) break;
+          float d = mandelbulbSDF(ro + rd * t, trap);
+          if (d < 0.001 * t) { hit = true; break; }
+          t += d * 0.65;
+        }
+
+        if (hit) {
+          vec3 pos = ro + rd * t;
+          vec3 nor = calcNormal(pos);
+          vec3 light = normalize(vec3(0.8, 0.9, -0.6));
+          float diff = max(dot(nor, light), 0.0);
+          vec3 base = mix(vec3(0.0, 0.9, 1.0), vec3(1.0, 0.1, 0.45), trap.x);
+          col = base * (0.15 + diff * 1.1 * u_reflex_density);
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    // Preset 3: 3D Cellular Voronoi Lattice
+    const FS_VORONOI = FS_HEADER + `
+      vec3 hash3(vec3 p) {
+        p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
+                 dot(p, vec3(269.5, 183.3, 246.1)),
+                 dot(p, vec3(113.5, 271.9, 124.6)));
+        return fract(sin(p) * 43758.5453123);
+      }
+
+      float voronoi3D(vec3 p, out vec3 cellID) {
+        vec3 i = floor(p);
+        vec3 f = fract(p);
+        float minDist = 1.0;
+        vec3 bestID = vec3(0.0);
+        for (int z = -1; z <= 1; z++) {
+          for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+              vec3 g = vec3(float(x), float(y), float(z));
+              vec3 o = hash3(i + g);
+              o = 0.5 + 0.45 * sin(u_time * 0.8 + 6.2831 * o + u_perturbation * 4.0);
+              vec3 r = g + o - f;
+              float d = dot(r, r);
+              if (d < minDist) { minDist = d; bestID = i + g; }
+            }
+          }
+        }
+        cellID = bestID;
+        return sqrt(minDist);
+      }
+
+      void main() {
+        vec2 p = (v_uv * 2.0 - 1.0);
+        p.x *= u_resolution.x / u_resolution.y;
+        vec3 ro = vec3(0.0, 0.0, 3.4);
+        vec3 rd = normalize(vec3(p, -1.7));
+        vec3 col = vec3(0.02, 0.04, 0.08);
+        float t = 0.6;
+        vec3 cellID;
+
+        for (int i = 0; i < 256; i++) {
+          if (i >= u_max_steps || t > 6.5) break;
+          vec3 pos = ro + rd * t;
+          float v = voronoi3D(pos * u_hex_scale, cellID);
+          float d = (length(pos) - 1.8) + (1.0 - v) * 0.55;
+          if (d < 0.002 * t) {
+            vec3 c = 0.5 + 0.5 * sin(cellID * 2.3 + vec3(0.0, 1.5, 3.1));
+            col = c * u_reflex_density * exp(-t * 0.18);
+            break;
+          }
+          t += d * 0.55;
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    /* =====================================================================
+       WEBGL PIPELINE & ENGINE SELF-HEALING CONTEXT MANAGER
+       ===================================================================== */
+    const canvas = document.getElementById('glcanvas');
+    const graphCanvas = document.getElementById('graphcanvas');
+    const graphCtx = graphCanvas.getContext('2d');
+
+    let gl = null;
+    let isWebGL2 = false;
+    let programs = {};
+    let activeShaderKey = 'hex_reflex';
+    let quadBuffer = null;
+    let animFrameId = null;
+    let uniformLocs = {};
+
+    const shaderSources = {
+      hex_reflex: FS_HEX_REFLEX,
+      fractal: FS_FRACTAL,
+      voronoi: FS_VORONOI
+    };
+
+    function logHealEvent(tag, message, colorClass = 'text-emerald-400') {
+      const logBox = document.getElementById('heal-log');
+      if (!logBox) return;
+      const entry = document.createElement('div');
+      entry.className = colorClass;
+      const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+      entry.textContent = `[${timeStr}][${tag}] ${message}`;
+      logBox.prepend(entry);
+      while (logBox.children.length > 25) {
+        logBox.removeChild(logBox.lastChild);
+      }
+    }
+
+    // Engine-level WebGL Context Loss & Self-Heal listeners
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      logHealEvent('CTX-LOST', 'WebGL context interrupted! Initiating self-heal...', 'text-rose-400');
+      updateHealBadge('RECOVERING CTX', 'amber');
+    }, false);
+
+    canvas.addEventListener('webglcontextrestored', () => {
+      logHealEvent('CTX-HEAL', 'WebGL context restored & shaders repackaged.', 'text-emerald-400');
+      initWebGL();
+      resizeCanvas();
+      updateHealBadge('SELF-HEAL: NOMINAL', 'emerald');
+      animFrameId = requestAnimationFrame(renderLoop);
+    }, false);
+
+    function initWebGL() {
+      gl = canvas.getContext('webgl2', { powerPreference: 'high-performance', antialias: false, depth: false, preserveDrawingBuffer: true });
+      if (gl) {
+        isWebGL2 = true;
+      } else {
+        gl = canvas.getContext('webgl', { powerPreference: 'high-performance', antialias: false, depth: false, preserveDrawingBuffer: true }) ||
+             canvas.getContext('experimental-webgl');
+        isWebGL2 = false;
+      }
+
+      if (!gl) {
+        logHealEvent('FATAL', 'WebGL unavailable on this device.', 'text-rose-500');
+        return false;
+      }
+
+      document.getElementById('gl-version-badge').textContent = isWebGL2 ? 'WEBGL 2.0' : 'WEBGL 1.0';
+
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      if (ext) {
+        const renderer = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+        document.getElementById('gpu-info').textContent = renderer || 'WebGL GPU';
+        document.getElementById('gpu-info').title = renderer || '';
+      }
+
+      const vertices = new Float32Array([-1.0, -1.0, 3.0, -1.0, -1.0, 3.0]);
+      quadBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+      programs['hex_reflex'] = createProgramWithSelfHeal(VS_SOURCE, FS_HEX_REFLEX, 'hex_reflex');
+      programs['fractal'] = createProgramWithSelfHeal(VS_SOURCE, FS_FRACTAL, 'fractal');
+      programs['voronoi'] = createProgramWithSelfHeal(VS_SOURCE, FS_VORONOI, 'voronoi');
+
+      cacheUniformLocations();
+      return true;
+    }
+
+    function compileShader(type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.warn('Shader compile warning/error:', gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    // Self-healing shader packager: falls back to mediump if highp fails on mobile GPUs
+    function createProgramWithSelfHeal(vsSrc, fsSrc, label) {
+      let vs = compileShader(gl.VERTEX_SHADER, vsSrc);
+      let fs = compileShader(gl.FRAGMENT_SHADER, fsSrc);
+
+      if (!fs) {
+        logHealEvent('REPACKAGE', `Repackaging ${label} shader with mediump fallback...`, 'text-amber-400');
+        const fallbackFs = fsSrc.replace('precision highp float;', 'precision mediump float;');
+        fs = compileShader(gl.FRAGMENT_SHADER, fallbackFs);
+      }
+
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      return program;
+    }
+
+    function cacheUniformLocations() {
+      for (let key in programs) {
+        const prog = programs[key];
+        if (!prog) continue;
+        gl.useProgram(prog);
+        uniformLocs[key] = {
+          pos: gl.getAttribLocation(prog, 'a_position'),
+          u_resolution: gl.getUniformLocation(prog, 'u_resolution'),
+          u_time: gl.getUniformLocation(prog, 'u_time'),
+          u_mouse: gl.getUniformLocation(prog, 'u_mouse'),
+          u_max_steps: gl.getUniformLocation(prog, 'u_max_steps'),
+          u_hex_scale: gl.getUniformLocation(prog, 'u_hex_scale'),
+          u_reflex_density: gl.getUniformLocation(prog, 'u_reflex_density'),
+          u_mag_pressure: gl.getUniformLocation(prog, 'u_mag_pressure'),
+          u_antimag_pulse: gl.getUniformLocation(prog, 'u_antimag_pulse'),
+          u_perturbation: gl.getUniformLocation(prog, 'u_perturbation'),
+          u_heal_wave: gl.getUniformLocation(prog, 'u_heal_wave'),
+          u_fxaa: gl.getUniformLocation(prog, 'u_fxaa')
+        };
+      }
+    }
+
+    /* =====================================================================
+       SIMULATION, SELF-HEAL & TELEMETRY STATE
+       ===================================================================== */
+    const state = {
+      renderScale: 1.0,
+      maxSteps: 96,
+      hexScale: 1.80,
+      reflexDensity: 1.45,
+      magPressure: 1.20,
+      antiMagPulse: 0.85,
+      healRate: 0.65,
+      perturbation: 0.0,     // 0.0 = 100% crystalline integrity, 1.0 = fractured lattice
+      healWave: 0.0,         // Sweeping repackage radial wave (0 -> 1.5)
+      healCycles: 0,
+      autoGovernor: true,
+      fxaa: false,
+      paused: false,
+      currentTime: 0.0,
+      mouse: { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5, isDown: false },
+      hudVisible: true
+    };
+
+    const HISTORY_SIZE = 120;
+    const frameTimes = new Float32Array(HISTORY_SIZE);
+    const integrityHistory = new Float32Array(HISTORY_SIZE);
+    integrityHistory.fill(100);
+
+    let frameIndex = 0;
+    let lastTimestamp = performance.now();
+    let minFps = 999;
+    let maxFps = 0;
+    let avgFps = 60;
+    let lowFpsStreak = 0;
+
+    let benchmark = {
+      active: false,
+      startTime: 0,
+      duration: 10000,
+      samples: [],
+      injectedTestFracture: false
+    };
+
+    /* =====================================================================
+       VIEWPORT & RESIZE HANDLING
+       ===================================================================== */
+    let displayWidth = 0;
+    let displayHeight = 0;
+    let targetWidth = 0;
+    let targetHeight = 0;
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+      displayWidth = window.innerWidth;
+      displayHeight = window.innerHeight;
+
+      targetWidth = Math.max(64, Math.floor(displayWidth * dpr * state.renderScale));
+      targetHeight = Math.max(64, Math.floor(displayHeight * dpr * state.renderScale));
+
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        if (gl) gl.viewport(0, 0, targetWidth, targetHeight);
+      }
+
+      document.getElementById('current-res-label').textContent = `${targetWidth}x${targetHeight} (${state.renderScale.toFixed(2)}x)`;
+
+      const graphRect = graphCanvas.getBoundingClientRect();
+      if (graphRect.width > 0) {
+        graphCanvas.width = Math.floor(graphRect.width * dpr);
+        graphCanvas.height = Math.floor(graphRect.height * dpr);
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    /* =====================================================================
+       REPACKAGE & SELF-HEAL MECHANICS
+       ===================================================================== */
+    function updateHealBadge(text, color) {
+      const badge = document.getElementById('heal-status-badge');
+      const panel = document.getElementById('self-heal-panel');
+      if (color === 'amber') {
+        badge.className = 'text-[9px] bg-amber-950/90 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/60 font-mono';
+        panel.classList.add('healing-active');
+      } else {
+        badge.className = 'text-[9px] bg-emerald-950/90 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-600/50 font-mono';
+        panel.classList.remove('healing-active');
+      }
+      badge.textContent = text;
+    }
+
+    function injectFracture(amount = 0.85) {
+      state.perturbation = Math.min(1.0, state.perturbation + amount);
+      updateHealBadge('SELF-HEALING LATTICE...', 'amber');
+      logHealEvent('FRACTURE', `Injected magnetic lattice perturbation (Entropy: ${state.perturbation.toFixed(2)})`, 'text-amber-400');
+      showToast('⚡ Magnetic Lattice Fracture Injected — Autonomous Self-Heal Active');
+    }
+
+    function triggerRepackageAndHeal() {
+      state.healWave = 0.02; // Starts radial repackage wave
+      state.perturbation *= 0.25; // Immediate rapid stabilization
+      state.healCycles++;
+      document.getElementById('stat-heal-cycles').textContent = state.healCycles;
+
+      // Also re-verify and repackage WebGL uniform state
+      cacheUniformLocations();
+      updateHealBadge('REPACKAGING & HEALING', 'amber');
+      logHealEvent('REPACKAGE', `Triggered full Hex-Reflex repackage & phase realignment (#${state.healCycles})`, 'text-emerald-400');
+      showToast('⟳ Repackaging Shader Lattice & Self-Healing Magnetic Symmetry');
+    }
+
+    document.getElementById('btn-perturb').addEventListener('click', () => injectFracture(0.85));
+    document.getElementById('btn-repackage').addEventListener('click', triggerRepackageAndHeal);
+
+    /* =====================================================================
+       USER INPUT & CONTROLS BINDING
+       ===================================================================== */
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#main-hud') || e.target.closest('header') || e.target.closest('#code-modal') || e.target.closest('#benchmark-modal')) return;
+      state.mouse.isDown = true;
+      state.mouse.x = e.clientX;
+      state.mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!state.mouse.isDown) return;
+      state.mouse.x = e.clientX;
+      state.mouse.y = e.clientY;
+    });
+
+    window.addEventListener('mouseup', () => { state.mouse.isDown = false; });
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0 && !e.target.closest('#main-hud') && !e.target.closest('header') && !e.target.closest('#code-modal')) {
+        state.mouse.isDown = true;
+        state.mouse.x = e.touches[0].clientX;
+        state.mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (state.mouse.isDown && e.touches.length > 0) {
+        state.mouse.x = e.touches[0].clientX;
+        state.mouse.y = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => { state.mouse.isDown = false; });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.code === 'Space') {
+        togglePause();
+      } else if (e.key === 'h' || e.key === 'H') {
+        toggleHUD();
+      } else if (e.key === 'p' || e.key === 'P') {
+      saveFramePNG();
+    } else if (e.key === 'r' || e.key === 'R') {
+        triggerRepackageAndHeal();
+      }
+    });
+
+    function togglePause() {
+      state.paused = !state.paused;
+      const btn = document.getElementById('btn-pause');
+      btn.textContent = state.paused ? 'Resume [Space]' : 'Pause [Space]';
+      btn.classList.toggle('text-amber-400', state.paused);
+      showToast(state.paused ? 'Simulation Paused' : 'Simulation Resumed');
+    }
+
+    function toggleHUD() {
+      state.hudVisible = !state.hudVisible;
+      document.getElementById('main-hud').classList.toggle('opacity-0', !state.hudVisible);
+      document.getElementById('main-hud').classList.toggle('pointer-events-none', !state.hudVisible);
+    }
+
+    document.getElementById('btn-pause').addEventListener('click', togglePause);
+
+    function saveFramePNG() {
+      if (!gl) return;
+      canvas.toBlob((blob) => {
+        if (!blob) { showToast('Capture failed'); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `axiom_${activeShaderKey}_${canvas.width}x${canvas.height}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        showToast('Frame saved as PNG');
+      }, 'image/png');
+    }
+    document.getElementById('btn-save-png').addEventListener('click', saveFramePNG);
+    document.getElementById('btn-toggle-ui').addEventListener('click', toggleHUD);
+
+    // Sliders Binding
+    document.getElementById('slider-hexscale').addEventListener('input', (e) => {
+      state.hexScale = parseFloat(e.target.value);
+      document.getElementById('val-hexscale').textContent = state.hexScale.toFixed(2);
+    });
+
+    document.getElementById('slider-reflex').addEventListener('input', (e) => {
+      state.reflexDensity = parseFloat(e.target.value);
+      document.getElementById('val-reflex').textContent = state.reflexDensity.toFixed(2);
+    });
+
+    document.getElementById('slider-magpressure').addEventListener('input', (e) => {
+      state.magPressure = parseFloat(e.target.value);
+      document.getElementById('val-magpressure').textContent = state.magPressure.toFixed(2);
+    });
+
+    document.getElementById('slider-antimag').addEventListener('input', (e) => {
+      state.antiMagPulse = parseFloat(e.target.value);
+      document.getElementById('val-antimag').textContent = state.antiMagPulse.toFixed(2);
+    });
+
+    document.getElementById('slider-healrate').addEventListener('input', (e) => {
+      state.healRate = parseFloat(e.target.value);
+      document.getElementById('val-healrate').textContent = state.healRate.toFixed(2) + ' /s';
+    });
+
+    document.getElementById('slider-steps').addEventListener('input', (e) => {
+      state.maxSteps = parseInt(e.target.value, 10);
+      document.getElementById('val-steps').textContent = state.maxSteps;
+    });
+
+    document.getElementById('slider-renderscale').addEventListener('input', (e) => {
+      state.renderScale = parseFloat(e.target.value);
+      document.getElementById('val-renderscale').textContent = state.renderScale.toFixed(2) + 'x';
+      resizeCanvas();
+    });
+
+    document.getElementById('check-aa').addEventListener('change', (e) => {
+      state.fxaa = e.target.checked;
+    });
+
+    document.getElementById('check-auto-governor').addEventListener('change', (e) => {
+      state.autoGovernor = e.target.checked;
+      const badge = document.getElementById('governor-state');
+      badge.textContent = state.autoGovernor ? 'ACTIVE' : 'MANUAL';
+      badge.className = state.autoGovernor
+        ? 'text-[9px] font-mono text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded'
+        : 'text-[9px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded';
+    });
+
+    const shaderDescs = {
+      hex_reflex: '3D Hexagonal domain repetition with radial "Reflex" light density, divergence-free magnetic compression, sine-modulated anti-magnetic blocking boundary, and autonomous lattice self-healing.',
+      fractal: 'Volumetric 3D Mandelbulb distance estimation raymarcher coupled to the magnetic perturbation and self-heal parameters.',
+      voronoi: 'Real-time raymarched 3D Voronoi cellular lattice with reactive phase perturbations and crystalline recovery.'
+    };
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-btn').forEach(b => {
+          b.className = 'preset-btn px-2 py-1.5 rounded text-[11px] font-semibold bg-slate-900/80 text-slate-400 border border-slate-800 hover:bg-slate-800/60 transition active:scale-95 text-center';
+        });
+        btn.className = 'preset-btn px-2 py-1.5 rounded text-[11px] font-semibold bg-cyan-950/90 text-cyan-300 border border-cyan-400/60 hover:bg-cyan-900/60 transition active:scale-95 text-center';
+        activeShaderKey = btn.dataset.shader;
+        document.getElementById('shader-desc').textContent = shaderDescs[activeShaderKey];
+        logHealEvent('SHADER', `Switched active architecture to ${activeShaderKey.toUpperCase()}`, 'text-cyan-300');
+      });
+    });
+
+    /* =====================================================================
+       LIVE GLSL SOURCE CODE INSPECTOR MODAL
+       ===================================================================== */
+    const codeModal = document.getElementById('code-modal');
+    const codeDisplay = document.getElementById('glsl-code-display');
+
+    document.getElementById('btn-open-code').addEventListener('click', () => {
+      codeDisplay.textContent = shaderSources[activeShaderKey].trim();
+      codeModal.classList.remove('hidden');
+    });
+
+    document.getElementById('btn-close-code').addEventListener('click', () => {
+      codeModal.classList.add('hidden');
+    });
+
+    document.getElementById('btn-copy-glsl').addEventListener('click', () => {
+      const ta = document.createElement('textarea');
+      ta.value = shaderSources[activeShaderKey].trim();
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('GLSL Shader Source Copied to Clipboard!');
+    });
+
+    /* =====================================================================
+       DUAL TELEMETRY GRAPH (FRAMETIME + LATTICE INTEGRITY %)
+       ===================================================================== */
+    function renderTelemetryGraph(currentDelta) {
+      const w = graphCanvas.width;
+      const h = graphCanvas.height;
+      if (!w || !h) return;
+
+      graphCtx.clearRect(0, 0, w, h);
+
+      const maxMsScale = 42.0;
+      const y60 = h - (16.66 / maxMsScale) * h;
+      const y30 = h - (33.33 / maxMsScale) * h;
+
+      graphCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      graphCtx.lineWidth = 1;
+      graphCtx.beginPath();
+      graphCtx.moveTo(0, y60); graphCtx.lineTo(w, y60);
+      graphCtx.moveTo(0, y30); graphCtx.lineTo(w, y30);
+      graphCtx.stroke();
+
+      const stepX = w / (HISTORY_SIZE - 1);
+
+      // 1. Draw Frametime (Cyan)
+      graphCtx.beginPath();
+      for (let i = 0; i < HISTORY_SIZE; i++) {
+        const idx = (frameIndex + i) % HISTORY_SIZE;
+        const val = frameTimes[idx];
+        const y = h - Math.min(1.0, val / maxMsScale) * h;
+        const x = i * stepX;
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = currentDelta > 33.3 ? '#ff0055' : '#00f3ff';
+      graphCtx.lineWidth = 2;
+      graphCtx.stroke();
+
+      // 2. Draw Self-Heal Lattice Integrity % (Emerald Green)
+      graphCtx.beginPath();
+      for (let i = 0; i < HISTORY_SIZE; i++) {
+        const idx = (frameIndex + i) % HISTORY_SIZE;
+        const integrity = integrityHistory[idx]; // 0 to 100
+        const y = h - (integrity / 105.0) * h;
+        const x = i * stepX;
+        if (i === 0) graphCtx.moveTo(x, y);
+        else graphCtx.lineTo(x, y);
+      }
+      graphCtx.strokeStyle = '#00ff9d';
+      graphCtx.lineWidth = 1.5;
+      graphCtx.stroke();
+    }
+
+    /* =====================================================================
+       BENCHMARK SUITE WITH AUTOMATED SELF-HEAL VERIFICATION
+       ===================================================================== */
+    const btnBenchmark = document.getElementById('btn-benchmark');
+    const benchProgressWrap = document.getElementById('bench-progress-wrap');
+    const benchProgressFill = document.getElementById('bench-progress-fill');
+    const benchTimeTxt = document.getElementById('bench-time-txt');
+    const modal = document.getElementById('benchmark-modal');
+
+    btnBenchmark.addEventListener('click', () => {
+      if (benchmark.active) return;
+      benchmark.active = true;
+      benchmark.startTime = performance.now();
+      benchmark.samples = [];
+      benchmark.injectedTestFracture = false;
+      btnBenchmark.disabled = true;
+      btnBenchmark.classList.add('opacity-50', 'cursor-not-allowed');
+      benchProgressWrap.classList.remove('hidden');
+      benchProgressWrap.classList.add('flex');
+      logHealEvent('BENCH', 'Started 10s Hex-Reflex & Self-Heal diagnostic sweep.', 'text-pink-400');
+    });
+
+    function updateBenchmark(now, dt) {
+      const elapsed = now - benchmark.startTime;
+      const progress = Math.min(1.0, elapsed / benchmark.duration);
+      benchProgressFill.style.width = (progress * 100) + '%';
+      benchTimeTxt.textContent = (elapsed / 1000).toFixed(1) + 's / 10.0s';
+      benchmark.samples.push(dt);
+
+      // Mid-benchmark automated fracture & repackage test at 3.5s
+      if (elapsed > 3500 && !benchmark.injectedTestFracture) {
+        benchmark.injectedTestFracture = true;
+        injectFracture(0.9);
+        setTimeout(() => triggerRepackageAndHeal(), 1200);
+      }
+
+      if (elapsed >= benchmark.duration) {
+        benchmark.active = false;
+        btnBenchmark.disabled = false;
+        btnBenchmark.classList.remove('opacity-50', 'cursor-not-allowed');
+        benchProgressWrap.classList.add('hidden');
+        benchProgressWrap.classList.remove('flex');
+        showBenchmarkReport(benchmark.samples);
+      }
+    }
+
+    function showBenchmarkReport(samples) {
+      if (!samples.length) return;
+      const sorted = [...samples].sort((a, b) => a - b);
+      const count = sorted.length;
+      const p50 = sorted[Math.floor(count * 0.50)];
+      const p95 = sorted[Math.floor(count * 0.95)];
+      const p99 = sorted[Math.floor(count * 0.99)];
+
+      let total = 0, drops = 0;
+      for (let i = 0; i < count; i++) {
+        total += samples[i];
+        if (samples[i] > 33.33) drops++;
+      }
+
+      const avgTime = total / count;
+      const avgFpsVal = (1000 / avgTime).toFixed(1);
+      const dropPct = ((drops / count) * 100).toFixed(1);
+      const integrityNow = Math.round((1.0 - state.perturbation) * 100);
+      const score = Math.round((1000 / Math.max(p95, 1)) * (state.renderScale * state.maxSteps) * 1.25);
+
+      document.getElementById('report-p50').textContent = p50.toFixed(2) + ' ms';
+      document.getElementById('report-p50-fps').textContent = `~${(1000 / p50).toFixed(0)} FPS`;
+      document.getElementById('report-p95').textContent = p95.toFixed(2) + ' ms';
+      document.getElementById('report-p95-fps').textContent = `~${(1000 / p95).toFixed(0)} FPS`;
+      document.getElementById('report-p99').textContent = p99.toFixed(2) + ' ms';
+      document.getElementById('report-p99-fps').textContent = `~${(1000 / p99).toFixed(0)} FPS`;
+
+      document.getElementById('report-frames').textContent = `${count} frames in 10s`;
+      document.getElementById('report-drops').textContent = `${drops} (${dropPct}%)`;
+      document.getElementById('report-heal-efficiency').textContent = `${integrityNow}% Integrity Restored`;
+      document.getElementById('report-avg-fps').textContent = `${avgFpsVal} FPS`;
+      document.getElementById('report-score').textContent = `${score.toLocaleString()} PTS`;
+
+      modal.classList.remove('hidden');
+    }
+
+    document.getElementById('btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+    document.getElementById('btn-done-modal').addEventListener('click', () => modal.classList.add('hidden'));
+
+    document.getElementById('btn-copy-report').addEventListener('click', () => {
+      const reportText = `[AXIOM HEX-REFLEX & SELF-HEAL REPORT]\n` +
+        `Architecture: ${activeShaderKey.toUpperCase()}\n` +
+        `Resolution: ${targetWidth}x${targetHeight} (${state.renderScale}x)\n` +
+        `Hex Scale: ${state.hexScale} | Reflex Density: ${state.reflexDensity} | Mag Pressure: ${state.magPressure}\n` +
+        `Avg FPS: ${document.getElementById('report-avg-fps').textContent} | P50: ${document.getElementById('report-p50').textContent} | P95: ${document.getElementById('report-p95').textContent}\n` +
+        `Self-Heal Recovery: ${document.getElementById('report-heal-efficiency').textContent}\n` +
+        `Score: ${document.getElementById('report-score').textContent}`;
+      const ta = document.createElement('textarea');
+      ta.value = reportText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Diagnostic Report Copied to Clipboard!');
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-16');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-16');
+      }, 2600);
+    }
+
+    /* =====================================================================
+       MAIN RENDER & SELF-HEAL GOVERNOR LOOP
+       ===================================================================== */
+    let lastUiUpdate = 0;
+
+    function renderLoop(timestamp) {
+      const dt = Math.min(timestamp - lastTimestamp, 250.0);
+      lastTimestamp = timestamp;
+      const dtSec = dt * 0.001;
+
+      if (!state.paused) {
+        state.currentTime += dtSec;
+
+        // 1. Visual Lattice Self-Healing (Exponential + Linear decay of perturbation)
+        if (state.perturbation > 0.0005) {
+          state.perturbation = Math.max(0.0, state.perturbation - state.healRate * dtSec * 0.45);
+          if (state.perturbation <= 0.005) {
+            state.perturbation = 0.0;
+            state.healCycles++;
+            document.getElementById('stat-heal-cycles').textContent = state.healCycles;
+            updateHealBadge('SELF-HEAL: NOMINAL', 'emerald');
+            logHealEvent('HEALED', 'Hexagonal magnetic lattice restored to 100% symmetry.', 'text-emerald-400');
+          }
+        }
+
+        // 2. Advance Repackage & Heal Radial Wave if active
+        if (state.healWave > 0.0) {
+          state.healWave += dtSec * 0.95;
+          if (state.healWave > 1.45) {
+            state.healWave = 0.0;
+            if (state.perturbation === 0.0) {
+              updateHealBadge('SELF-HEAL: NOMINAL', 'emerald');
+            }
+          }
+        }
+      }
+
+      // 3. Engine-Level Adaptive Self-Heal Governor (Auto-Repairs FPS drops)
+      if (state.autoGovernor && dt > 38.0 && state.maxSteps > 40) {
+        lowFpsStreak++;
+        if (lowFpsStreak > 18) {
+          state.maxSteps = Math.max(32, state.maxSteps - 16);
+          document.getElementById('slider-steps').value = state.maxSteps;
+          document.getElementById('val-steps').textContent = state.maxSteps;
+          state.healCycles++;
+          document.getElementById('stat-heal-cycles').textContent = state.healCycles;
+          logHealEvent('GOV-HEAL', `Auto-repaired frame latency by scaling raymarch steps to ${state.maxSteps}`, 'text-cyan-300');
+          lowFpsStreak = 0;
+        }
+      } else {
+        lowFpsStreak = Math.max(0, lowFpsStreak - 1);
+      }
+
+      // Record telemetry history
+      const integrityPct = Math.round((1.0 - state.perturbation) * 100);
+      frameTimes[frameIndex] = dt;
+      integrityHistory[frameIndex] = integrityPct;
+      frameIndex = (frameIndex + 1) % HISTORY_SIZE;
+
+      if (benchmark.active) {
+        updateBenchmark(timestamp, dt);
+      }
+
+      // Throttle DOM Telemetry updates to 10Hz
+      if (timestamp - lastUiUpdate > 100) {
+        lastUiUpdate = timestamp;
+        const currentFps = dt > 0 ? (1000 / dt) : 60;
+
+        let sum = 0, mn = 999, mx = 0;
+        for (let i = 0; i < HISTORY_SIZE; i++) {
+          const v = frameTimes[i];
+          if (v > 0) {
+            const f = 1000 / v;
+            sum += f;
+            if (f < mn) mn = f;
+            if (f > mx) mx = f;
+          }
+        }
+        avgFps = Math.round(sum / HISTORY_SIZE);
+        minFps = Math.round(mn);
+        maxFps = Math.round(mx);
+
+        document.getElementById('fps-val').textContent = Math.round(currentFps);
+        document.getElementById('ms-val').innerHTML = `${dt.toFixed(1)}<span class="text-[10px] font-normal text-cyan-600">ms</span>`;
+        document.getElementById('integrity-val').textContent = `${integrityPct}%`;
+        document.getElementById('entropy-readout').textContent = `Entropy: ${state.perturbation.toFixed(2)}`;
+
+        document.getElementById('stat-fps-low').textContent = minFps;
+        document.getElementById('stat-fps-high').textContent = maxFps;
+
+        const computeIdx = ((targetWidth * targetHeight * state.maxSteps * currentFps) / 1e8).toFixed(1);
+        document.getElementById('stat-compute-load').textContent = `${computeIdx} G-Ops/s`;
+
+        renderTelemetryGraph(dt);
+      }
+
+      // Execute WebGL Shader Draw Call
+      const prog = programs[activeShaderKey];
+      const locs = uniformLocs[activeShaderKey];
+
+      if (prog && gl && locs) {
+        gl.useProgram(prog);
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer);
+        gl.enableVertexAttribArray(locs.pos);
+        gl.vertexAttribPointer(locs.pos, 2, gl.FLOAT, false, 0, 0);
+
+        gl.uniform2f(locs.u_resolution, targetWidth, targetHeight);
+        gl.uniform1f(locs.u_time, state.currentTime);
+        gl.uniform2f(
+          locs.u_mouse,
+          state.mouse.x * (window.devicePixelRatio || 1) * state.renderScale,
+          (displayHeight - state.mouse.y) * (window.devicePixelRatio || 1) * state.renderScale
+        );
+        gl.uniform1i(locs.u_max_steps, state.maxSteps);
+        gl.uniform1f(locs.u_hex_scale, state.hexScale);
+        gl.uniform1f(locs.u_reflex_density, state.reflexDensity);
+        gl.uniform1f(locs.u_mag_pressure, state.magPressure);
+        gl.uniform1f(locs.u_antimag_pulse, state.antiMagPulse);
+        gl.uniform1f(locs.u_perturbation, state.perturbation);
+        gl.uniform1f(locs.u_heal_wave, state.healWave);
+        gl.uniform1i(locs.u_fxaa, state.fxaa ? 1 : 0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+
+      animFrameId = requestAnimationFrame(renderLoop);
+    }
+
+    window.onload = function() {
+      if (initWebGL()) {
+        resizeCanvas();
+        animFrameId = requestAnimationFrame(renderLoop);
+      }
+    };
+  </script>
+</body>
+</html>
