@@ -1,3 +1,56 @@
+Here is the unified articulation (**corticulation**) of the entire system architecture, memory model, mobile runtime, build automation, and CI/CD security pipeline established across our engineering workflows:
+
+---
+
+### **1. Silicon Layer: Hardware Obfuscation & SAT Resistance**
+* **Covert Gate Indistinguishability**: Eliminates visual and structural signatures using channel doping ("always-on") and \\(\text{SiO}_2\\) dummy contacts ("always-off"). Under SEM (Scanning Electron Microscopy) and PVC (Passive Voltage Contrast), covert cells match uncamouflaged standard cells.
+* **Whole-Netlist Encoding**: Forces Boolean Satisfiability (SAT) attackers to treat every gate pin across the entire netlist as a potential key bit, expanding key length \\(|K|\\) and CNF clause density to induce solver timeouts (\\(>12\text{ hours}\\)).
+* **K-Gate Lock & Anti-AppSAT**: Intercorrelated routing prevents Automatic Test Pattern Generation (ATPG) sensitization and neutralizes early error-rate convergence in approximate SAT (AppSAT) attacks.
+
+---
+
+### **2. Cryptographic Memory Security & Zeroization**
+* **LLVM Dead Store Elimination (DSE) Bypass**: Utilizes `zeroize::Zeroizing<T>` with volatile writes and `compiler_fence` barriers to guarantee memory erasure upon variable drop.
+* **Stack Move Prevention**: Mitigates Rust move-semantics (bitwise stack copies leaving plaintext remnants) by pinning secret key buffers in heap-allocated containers (`secrecy::SecretBox<T>` / `Box<[u8; 32]>`).
+* **RAM Swap Lock**: Invokes `libc::mlockall(MCL_CURRENT | MCL_FUTURE)` to prevent the OS kernel from paging plaintext sensitive data out to disk or swap storage.
+
+---
+
+### **3. Network Security & Microsegmentation**
+* **eBPF Layer 7 Policies (Cilium)**: Enforces application-aware network policies across gRPC/HTTP endpoints.
+* **Zero-Egress Interconnect**: Implements zero-trust egress rules at the kernel boundary to isolate local telemetry and prevent unauthorized outbound socket communication.
+
+---
+
+### **4. Mobile Execution & Environment Sanitization (Termux / Android)**
+* **Bionic Linker Hook Preservation**: Sets `LD_PRELOAD="$PREFIX/lib/libtermux-exec.so"` to maintain Android Bionic `execve()` wrappers and eliminate `os error 13` execution denials.
+* **Path Symlink Bridge**: Normalizes Unicode fraction-slash directory names (`MetaEye⁄Void`, U+2044) by binding clean symlinks (`ln -sfn "$WORK_DIR" "$HOME/metaeye_work"`).
+* **Pure-Rust C-FFI Stubbing**: Replaces native C library compilation (`audiopus_sys`) with internal C-ABI stubs (`#[no_mangle] pub unsafe extern "C"`) in `local_crates/audiopus_sys` to guarantee hermetic offline builds.
+
+---
+
+### **5. Resource & Thread Scheduling Strategy**
+* **Single-Threaded Compilation**: Sets `CARGO_BUILD_JOBS=1` and `codegen-units = 1` in `Cargo.toml` to prevent memory spikes and Android Low Memory Killer (`LMKD`) `SIGKILL` terminations.
+* **JVM / Gradle Clamping**: Configures `GRADLE_OPTS="-Xmx1280m -XX:MaxMetaspaceSize=384m -Dorg.gradle.parallel=false"`.
+* **Power & Cpu Interlock**: Acquires `termux-wake-lock` with shell exit traps to prevent Android Doze mode CPU throttle during long build pipelines.
+
+---
+
+### **6. Android Activity Manager & Installer Repair (`fixsnake-v2`)**
+* **Content URI Translation**: Converts filesystem paths to `content://com.termux.files/...` to resolve Android 7.0+ `FileUriExposedException`.
+* **Intent Flag Bitmasking**: Combines `FLAG_GRANT_READ_URI_PERMISSION` (`0x00000001`) and `FLAG_ACTIVITY_NEW_TASK` (`0x10000000`) into integer mask **`268435457`**.
+* **4-Tier Cascade**: Falls back seamlessly through `termux-open` \\(\rightarrow\\) `termux-am` \\(\rightarrow\\) system `am` \\(\rightarrow\\) ADB local loopback (`127.0.0.1:5555`).
+
+---
+
+### **7. CI/CD Security & Dependency Management**
+* **CodeQL Advanced Workflow**: Configures a matrix analysis (`rust` in `manual` mode with `dtolnay/rust-toolchain@stable`, `javascript-typescript` in `none` mode) with proper SARIF permissions.
+* **Dependabot Update Verification**: Manages dependency group updates (`postcss`, `protobufjs`, `ws`, `@xmldom/xmldom`, `@protobufjs/utf8`) across root and sub-directories (`/lex-forensica-v8`) with isolated local test passes.
+
+---
+
+Would you like to generate a single runnable master shell script that integrates all these build, scheduling, security, and installation steps into a single command?
+
 b12,"9 725,38","9 646,59","+0,81 %","2,98","2,88","+3,47 %","154,98","154,43","+0,35 %"
 b15,"53 432,06","53 134,15","+0,56 %","26,32","26,32","0,00 %","654,93","657,43","-0,38 %"
 b17,"171 193,62","170 264,84","+0,54 %","32,47","31,14","+4,27 %","2 015,70","2 011,30","+0,22 %"
