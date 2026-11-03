@@ -131,5 +131,68 @@ Fáze 3: Víceklíčové kódování K-Gate Lock (Logic Encoding)  Implementace 
 Fáze 4: Verifikace a akceptační testy (Sign-off & Qualification)  Ověření absence parazitních svodových cest a simulace statického proudového odběru  $I_{DDQ}$ . Spuštění verifikačních testů vůči SAT a ATPG útočným nástrojům pro potvrzení kompletní neprolomitelnosti obvodu.
 Kombinace fyzikálně nediferencovatelných skrytých hradel na tranzistorové úrovni a víceklíčového dynamického logického zamykání K-Gate Lock vytváří absolutní strategickou obrannou linii. Tato metodika poskytuje 4. generaci ochrany polovodičového duševního vlastnictví, která spolehlivě deklasuje invazivní mikroskopické útoky i pokročilé orákulem vedené logické řešiče.
  
- 
-Claude is responding
+ To locate a generated `.apk` file across a complex or deeply nested directory tree (such as in Termux, Linux, or Android build environments), use one of the following methods depending on your needs:
+
+---
+
+### 1. Direct `find` Command (Most Reliable)
+
+* **Search from current directory:**
+  ```bash
+  find . -type f -name "*.apk"
+  ```
+* **Search your entire home directory (suppressing permission errors):**
+  ```bash
+  find $HOME -type f -name "*.apk" 2>/dev/null
+  ```
+* **Find only the most recently created/modified APK:**
+  ```bash
+  find . -type f -name "*.apk" -exec ls -1t {} + | head -n 1
+  ```
+
+---
+
+### 2. Standard Build Output Paths to Check
+
+Build tools usually place compiled `.apk` files in predictable target folders:
+
+* **Android / Gradle / Termux builds:**
+  `app/build/outputs/apk/debug/app-debug.apk`  
+  `app/build/outputs/apk/release/app-release.apk`
+* **Flutter projects:**
+  `build/app/outputs/flutter-apk/app-release.apk`
+* **React Native:**
+  `android/app/build/outputs/apk/release/app-release.apk`
+* **Shared Storage / Downloads:**
+  `~/storage/shared/Download/` or `/sdcard/Download/`
+
+---
+
+### 3. Fast Search (If `fd` is installed)
+
+If you have `fd` installed (`pkg install fd`), it executes much faster than standard `find`:
+```bash
+fd -e apk
+```
+
+---
+
+### 4. Automatic Integration in Automation Scripts
+
+To dynamically capture and pass the newly built APK path directly to installer utilities (like `fixsnake-v2.sh`), store the output in a script variable:
+
+```bash
+# Locate newest APK dynamically
+TARGET_APK=$(find "$HOME" -type f -name "*.apk" 2>/dev/null | head -n 1)
+
+if [ -n "$TARGET_APK" ]; then
+    echo "[FOUND] APK located at: $TARGET_APK"
+    ./fixsnake-v2.sh "$TARGET_APK"
+else
+    echo "[ERROR] No APK file found in workspace."
+fi
+```
+
+---
+
+Would you like to auto-wire this search logic into your `metaeye_master_runner.sh` script so it automatically detects and triggers installation right after compilation?
