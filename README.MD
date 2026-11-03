@@ -82,16 +82,6 @@ Here is the unified articulation (**corticulation**) of the entire system archit
 * **CodeQL Advanced Workflow**: Configures a matrix analysis (`rust` in `manual` mode with `dtolnay/rust-toolchain@stable`, `javascript-typescript` in `none` mode) with proper SARIF permissions.
 * **Dependabot Update Verification**: Manages dependency group updates (`postcss`, `protobufjs`, `ws`, `@xmldom/xmldom`, `@protobufjs/utf8`) across root and sub-directories (`/lex-forensica-v8`) with isolated local test passes.
 
----
-
-Would you like to generate a single runnable master shell script that integrates all these build, scheduling, security, and installation steps into a single command?
-
-b12,"9 725,38","9 646,59","+0,81 %","2,98","2,88","+3,47 %","154,98","154,43","+0,35 %"
-b15,"53 432,06","53 134,15","+0,56 %","26,32","26,32","0,00 %","654,93","657,43","-0,38 %"
-b17,"171 193,62","170 264,84","+0,54 %","32,47","31,14","+4,27 %","2 015,70","2 011,30","+0,22 %"
-s35932,"111 402,38","111 088,12","+0,28 %","14,13","10,84","+30,35 %","2 290,20","2 328,40","-1,67 %"
-s38417,"107 803,98","107 349,70","+0,42 %","20,84","16,69","+24,87 %","1 949,00","1 949,60","-0,03 %"
-s38584,"87 647,35","87 229,18","+0,48 %","15,38","13,11","+17,32 %","1 572,10","1 570,90","+0,08 %"
 Mimořádně nízké hodnoty režie plochy a výkonu potvrzují praktickou použitelnost architektury i pro průmyslové návrhy s přísnými rozpočty.
 4. Rigorózní bezpečnostní verifikace: Odolnost vůči SAT a ATPG útokům (Security Verification)
 Bezpečnostní architektura skrytých hradel a K-Gate Locku je postavena na eliminaci základního předpokladu všech orákulem vedených de-kamuflážních útoků: útočník nedokáže z layoutu ani mikroskopických snímků určit, které buňky jsou kamuflážní a které jsou běžnými standardními prvky. V důsledku toho musí útočník považovat všechna hradla v obvodu za podezřelá, což způsobuje explozivní nárůst vyhledávacího prostoru.
@@ -131,68 +121,63 @@ Fáze 3: Víceklíčové kódování K-Gate Lock (Logic Encoding)  Implementace 
 Fáze 4: Verifikace a akceptační testy (Sign-off & Qualification)  Ověření absence parazitních svodových cest a simulace statického proudového odběru  $I_{DDQ}$ . Spuštění verifikačních testů vůči SAT a ATPG útočným nástrojům pro potvrzení kompletní neprolomitelnosti obvodu.
 Kombinace fyzikálně nediferencovatelných skrytých hradel na tranzistorové úrovni a víceklíčového dynamického logického zamykání K-Gate Lock vytváří absolutní strategickou obrannou linii. Tato metodika poskytuje 4. generaci ochrany polovodičového duševního vlastnictví, která spolehlivě deklasuje invazivní mikroskopické útoky i pokročilé orákulem vedené logické řešiče.
  
- To locate a generated `.apk` file across a complex or deeply nested directory tree (such as in Termux, Linux, or Android build environments), use one of the following methods depending on your needs:
+Self-Correcting Licensing & Terms and Conditions (TERMS_AND_CONDITIONS.md)
 
----
+Canonical Contract Identifier: S:OpenSource(nosubs!-asis)Contract!
+SPDX License Expression: MIT OR Apache-2.0
+Economic Model: [PaidvsFREE] — $0.00 USD Recurring Subscription Lock (nosubs!) + Decaying Corporate Bond
+Verification Gate: check:pass:true_only // SHA256SUMS.manifest
+1. Preamble & Scope
 
-### 1. Direct `find` Command (Most Reliable)
+These Terms and Conditions ("Terms") govern the use, reproduction, modification, and deployment of the Axiom Hex-Reflex (SY4-EEG BlockMind & MetaEye-Void Unified Stack) software, shaders, Rust crates, deployment scripts (deploy-rightout.sh, fixsnake-v2.sh), and documentation (README.MD, SECURITY.md).
 
-* **Search from current directory:**
-  ```bash
-  find . -type f -name "*.apk"
-  ```
-* **Search your entire home directory (suppressing permission errors):**
-  ```bash
-  find $HOME -type f -name "*.apk" 2>/dev/null
-  ```
-* **Find only the most recently created/modified APK:**
-  ```bash
-  find . -type f -name "*.apk" -exec ls -1t {} + | head -n 1
-  ```
+The software incorporates an in-app and build-time Self-Correcting Licensing & T&C Engine (MOD-06) that continuously audits six mandatory compliance clauses (TC-01 .. TC-06) and automatically remediates any licensing drift back to canonical compliance.
+2. Six Mandatory Self-Correcting Clauses (TC-01 .. TC-06)
+TC-01 — Dual Open-Source Grant (S:OpenSource(nosubs!-asis)Contract!)
 
----
+    Rule: Contributors and users are granted a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright and patent license under the MIT License and Apache License, Version 2.0.
 
-### 2. Standard Build Output Paths to Check
+    Automatic Self-Correction: Any attempt to inject revocable evaluation locks, proprietary source-hiding clauses, or restrictive field-of-use covenants into derivative manifests is flagged as DRIFT and automatically restored to the irrevocable dual MIT/Apache-2.0 grant.
 
-Build tools usually place compiled `.apk` files in predictable target folders:
+TC-02 — [PaidvsFREE] $0.00 Recurring Subscription Lock (nosubs!)
 
-* **Android / Gradle / Termux builds:**
-  `app/build/outputs/apk/debug/app-debug.apk`  
-  `app/build/outputs/apk/release/app-release.apk`
-* **Flutter projects:**
-  `build/app/outputs/flutter-apk/app-release.apk`
-* **React Native:**
-  `android/app/build/outputs/apk/release/app-release.apk`
-* **Shared Storage / Downloads:**
-  `~/storage/shared/Download/` or `/sdcard/Download/`
+    Rule: Recurring subscription fees (monthly, annual, or per-seat SaaS rent) are permanently locked at $0.00 USD forever across both [Personal account:DEV] and Global Bond tiers.
 
----
+    Decaying Corporate Bond Formula: Institutional or enterprise entities electing the Global Bond tier post a one-time decaying bond governed by:
 
-### 3. Fast Search (If `fd` is installed)
+            
 
-If you have `fd` installed (`pkg install fd`), it executes much faster than standard `find`:
-```bash
-fd -e apk
-```
+          
 
----
 
-### 4. Automatic Integration in Automation Scripts
+    where decayed bond value subsidizes open-source [Personal account:DEV] commons infrastructure.
 
-To dynamically capture and pass the newly built APK path directly to installer utilities (like `fixsnake-v2.sh`), store the output in a script variable:
+    Automatic Self-Correction: If any non-zero recurring fee is detected in state or configuration, ModularStackAndLicensingEngine.selfCorrectAndSealLicensing(...) clamps recurringFeeUsd = 0.00f and re-seals the contract digest.
 
-```bash
-# Locate newest APK dynamically
-TARGET_APK=$(find "$HOME" -type f -name "*.apk" 2>/dev/null | head -n 1)
+TC-03 — Explicit "AS IS" Warranty Disclaimer & Non-Clinical Scope (asis)
 
-if [ -n "$TARGET_APK" ]; then
-    echo "[FOUND] APK located at: $TARGET_APK"
-    ./fixsnake-v2.sh "$TARGET_APK"
-else
-    echo "[ERROR] No APK file found in workspace."
-fi
-```
+    Rule: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
 
----
+    Non-Clinical Telemetry Notice: All SY4-EEG BlockMind, Osa-A-X-00..09, and as[core] RGB biometric streams, waveforms, and cognitive load indices are mathematical and hardware-sensor simulations designed exclusively for software engineering, shader profiling, and cryptographic research. They are not medical devices and must not be used for clinical diagnosis or treatment.
 
-Would you like to auto-wire this search logic into your `metaeye_master_runner.sh` script so it automatically detects and triggers installation right after compilation?
+TC-04 — MiCA Article 2 & Recital 22 Non-Custodial Safe Harbor
+
+    Rule: The application executes strictly on local device paths (DEST-1..6 and 1+ /Own/Dev/Logic_States) with zero custody, control, brokerage, or transfer of user crypto-assets or private keys.
+
+    Regulatory Alignment: Under Regulation (EU) 2023/1114 on Markets in Crypto-Assets (MiCA) Article 2 and Recital 22, pure non-custodial hardware/software telemetry and local cryptographic verification tooling do not constitute Crypto-Asset Service Provider (CASP) custody or intermediation.
+
+TC-05 — DORA Article 11 ICT Operational Continuity & Self-Heal
+
+    Rule: All subsystems implement deterministic local fallback (RULE: IF FAILLOAD POSSIBLE),GLSL sanctuary clamping (AS TO GLSL: TRUE // IF FALSE -> DENY), and local Room SQLite SHA-256 continuity logging (spect_audit.db).
+
+    Regulatory Alignment: Satisfies Regulation (EU) 2022/2554 (Digital Operational Resilience Act — DORA) Article 11 requirements for autonomous ICT response, recovery, and verifiable local auditability without external cloud lock-in.
+
+TC-06 — Cryptographic Provenance (check:pass:true_only & SHA256SUMS.manifest)
+
+    Rule: Every script (deploy-rightout.sh, fixsnake-v2.sh), GLSL shader, and modularity block (MOD-01..MOD-06) carries a deterministic 64-character SHA-256 digest verified by the in-app CODEX & SHA-256 Script Verifier and sealed in SHA256SUMS.manifest.
+
+3. Termux vs. Standard Environment Deployment Terms
+
+    Android / Termux (limit:termux): Users deploying on Android via Termux must use the content://com.termux.files/... URI translation and decimal flag bitmask 268435457 (0x10000001) provided in fixsnake-v2.sh to comply with Android API 24+ FileProvider security boundaries.
+
+    Standard Linux & Raspberry Pi 4: Users deploying on standard GNU/Linux or Raspberry Pi 4 environments retain native multi-core build parallelism and POSIX filesystem semantics without Bionic LD_PRELOAD overrides.
