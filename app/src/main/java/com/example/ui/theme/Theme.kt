@@ -4,19 +4,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val AxiomDarkColorScheme = darkColorScheme(
+private val AxiomMetallurgiaDarkColorScheme = darkColorScheme(
     primary = NeonCyan,
     onPrimary = ObsidianBg,
     secondary = NeonGreen,
     onSecondary = ObsidianBg,
-    tertiary = NeonPink,
+    tertiary = AntiMagCobaltCyan,
     onTertiary = TextPrimary,
-    background = ObsidianBg,
+    background = SteelAlloyGunmetal,
     onBackground = TextPrimary,
-    surface = HudSurface,
+    surface = SteelAlloyBrushedSurface,
     onSurface = TextPrimary,
     surfaceVariant = HudPanelBg,
-    onSurfaceVariant = TextSecondary,
+    onSurfaceVariant = AntiMagAusteniteSilver,
+    outline = SteelAlloyChromeEdge,
     error = NeonAmber,
     onError = ObsidianBg
 )
@@ -26,7 +27,7 @@ fun MyApplicationTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = AxiomDarkColorScheme,
+        colorScheme = AxiomMetallurgiaDarkColorScheme,
         typography = Typography,
         content = content
     )

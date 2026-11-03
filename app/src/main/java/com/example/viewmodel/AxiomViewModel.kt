@@ -31,9 +31,15 @@ import com.example.service.AsCoreRgbBiometricFrame
 import com.example.service.AsCoreRgbBiometricStreamService
 import com.example.service.AsCoreStreamProfile
 import com.example.service.DefaultAsCoreRgbBiometricStreamService
+import com.example.service.DeployTargetDeviceMode
 import com.example.service.DeployTierMode
+import com.example.service.EnvComparisonCategoryFilter
 import com.example.service.GlobalVsPersonalDeployEngine
 import com.example.service.LocalOnlyPathsInterconnectEngine
+import com.example.service.MetallurgiaSteelAlloyPreset
+import com.example.service.ModularStackAndLicensingEngine
+import com.example.service.ModularStackLicensingState
+import com.example.service.ModularityBlockSpec
 import com.example.service.RgbChannelAxis
 import com.example.service.ServerlessLocalDeployState
 import com.example.service.SpectRoomSensorDashboardState
@@ -237,6 +243,7 @@ data class AxiomUiState(
     val micaDWaveDelta: Float = 0.14f,
     val micaDWaveSafeSealed: Boolean = true,
     val unifiedDeployWhitepaperState: UnifiedDeployWhitepaperState = GlobalVsPersonalDeployEngine.evaluateUnifiedState(),
+    val modularStackLicensingState: ModularStackLicensingState = ModularStackAndLicensingEngine.buildInitialState(),
 
     // As-If Screen Share // Search Best Work
     val screenShareSearchQuery: String = "",
@@ -3096,6 +3103,136 @@ class AxiomViewModel(
 
         appendLog("FAILLOAD", interceptNote, LogSeverity.NOMINAL)
         showToast("IF FAILLOAD POSSIBLE: Synthesized Safe Local Ant-Filter Bitmap")
+    }
+
+    fun selectModularityBlock(blockId: String) {
+        _uiState.update { state ->
+            state.copy(
+                modularStackLicensingState = state.modularStackLicensingState.copy(
+                    selectedBlockId = blockId
+                )
+            )
+        }
+    }
+
+    fun selectEnvComparisonFilter(filter: EnvComparisonCategoryFilter) {
+        _uiState.update { state ->
+            state.copy(
+                modularStackLicensingState = state.modularStackLicensingState.copy(
+                    selectedEnvFilter = filter
+                )
+            )
+        }
+    }
+
+    fun selectMarketingPillar(pillarId: String) {
+        _uiState.update { state ->
+            state.copy(
+                modularStackLicensingState = state.modularStackLicensingState.copy(
+                    selectedMarketingPillarId = pillarId
+                )
+            )
+        }
+    }
+
+    fun simulateLicensingTcDrift() {
+        _uiState.update { state ->
+            val drifted = ModularStackAndLicensingEngine.simulateLicensingDrift(state.modularStackLicensingState)
+            state.copy(modularStackLicensingState = drifted)
+        }
+        appendLog(
+            "T&C-AUDIT",
+            "Simulated T&C licensing drift ($29/mo subscription & custodial ambiguity injected).",
+            LogSeverity.WARNING
+        )
+        showToast("Simulated T&C Drift — Click Self-Correct & Seal to remediate")
+    }
+
+    fun executeLicensingSelfCorrectionAndSeal() {
+        val currentMod = _uiState.value.modularStackLicensingState
+        val healed = ModularStackAndLicensingEngine.selfCorrectAndSealLicensing(currentMod)
+        val codexEntry = ModularStackAndLicensingEngine.buildSelfCorrectedLicensingCodexEntry(healed)
+        _uiState.update { state ->
+            state.copy(modularStackLicensingState = healed)
+        }
+        loadCodexEntryIntoVerifier(codexEntry)
+        executeScriptCleanAndPersistAudit()
+        appendLog(
+            "T&C-HEAL",
+            "Self-corrected Licensing T&C to S:OpenSource(nosubs!-asis)Contract! ($0.00 recurring, MiCA Recital 22 & DORA Art. 11 sealed).",
+            LogSeverity.NOMINAL
+        )
+        showToast("Self-Corrected & Sealed Licensing T&C (${healed.licensingSealSha256.take(12)}...)")
+    }
+
+    fun loadModularityBlockIntoVerifier(block: ModularityBlockSpec) {
+        val entry = ModularStackAndLicensingEngine.toCodexEntry(block)
+        loadCodexEntryIntoVerifier(entry)
+        executeScriptCleanAndPersistAudit()
+        showToast("Loaded & Verified ${block.id} (${block.shortTag})")
+    }
+
+    fun selectTargetDeviceMode(mode: DeployTargetDeviceMode) {
+        _uiState.update { state ->
+            state.copy(
+                modularStackLicensingState = ModularStackAndLicensingEngine.selectTargetDeviceMode(
+                    state.modularStackLicensingState,
+                    mode
+                )
+            )
+        }
+        showToast("2FA Target Runtime: ${mode.runtimeEnvToken}")
+    }
+
+    fun selectMetallurgiaPreset(preset: MetallurgiaSteelAlloyPreset) {
+        _uiState.update { state ->
+            state.copy(
+                modularStackLicensingState = ModularStackAndLicensingEngine.selectMetallurgiaPreset(
+                    state.modularStackLicensingState,
+                    preset
+                )
+            )
+        }
+        showToast("Selected ${preset.badge} (mu_r=${preset.relativePermeabilityMuR})")
+    }
+
+    fun engageMetallurgiaAntiMagPosition(preset: MetallurgiaSteelAlloyPreset) {
+        _uiState.update { state ->
+            val updatedMod = ModularStackAndLicensingEngine.selectMetallurgiaPreset(
+                state.modularStackLicensingState,
+                preset
+            )
+            state.copy(
+                modularStackLicensingState = updatedMod,
+                antiMagPulse = preset.antiMagPulseTarget,
+                magPressure = preset.magPressureTarget,
+                hexScale = preset.hexScaleTarget,
+                orbitalYawNorm = 0.0f,
+                orbitalPitchNorm = 0.0f,
+                perturbation = 0.0f,
+                glslGateTrue = true,
+                glslGateDiagnostic = "Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION) // ${preset.badge} Locked"
+            )
+        }
+        appendLog(
+            "METALLURGIA",
+            "Engaged ${preset.badge} (${preset.positionVectorLabel}, mu_r=${preset.relativePermeabilityMuR}, u_antiMag=${preset.antiMagPulseTarget}).",
+            LogSeverity.NOMINAL
+        )
+        showToast("Engaged ${preset.badge} in 3D Viewport")
+    }
+
+    fun verifyAndSeal2faDeployLogic() {
+        val currentMod = _uiState.value.modularStackLicensingState
+        val entry = ModularStackAndLicensingEngine.buildTwoFactorAndMetallurgiaCodexEntry(currentMod)
+        loadCodexEntryIntoVerifier(entry)
+        executeScriptCleanAndPersistAudit()
+        appendLog(
+            "2FA-DEPLOY",
+            "Verified & Sealed 2FA Output Logic (${currentMod.twoFactorComparison.composite2faPairingToken}) for ${currentMod.twoFactorComparison.targetDeviceMode.runtimeEnvToken}.",
+            LogSeverity.NOMINAL
+        )
+        showToast("Verified & Sealed 2FA Deploy Logic (${currentMod.twoFactorComparison.composite2faPairingToken})")
     }
 
     fun setShowBlockMindDashboard(show: Boolean) {

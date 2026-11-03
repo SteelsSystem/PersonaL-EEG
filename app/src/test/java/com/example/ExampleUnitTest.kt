@@ -213,4 +213,49 @@ class ExampleUnitTest {
         assertTrue(codexEntry.codeSnippet.contains("S:OpenSource(nosubs!-asis)Contract!"))
         assertEquals(64, wp.whitepaperSealSha256.length)
     }
+
+    @Test
+    fun modularStackAndLicensingEngine_verifiesModularityBlocks_termuxMatrix_andSelfCorrectingTc() {
+        val state = AxiomUiState()
+        val mod = state.modularStackLicensingState
+        assertEquals(6, mod.modularityBlocks.size)
+        assertEquals(10, mod.comparisonRows.size)
+        assertEquals(4, mod.marketingPillars.size)
+        assertEquals(6, mod.licensingClauses.size)
+        assertTrue(mod.licensingCompliantAll)
+        assertEquals(0.00f, mod.recurringFeeUsd, 0.0001f)
+        assertEquals("S:OpenSource(nosubs!-asis)Contract!", mod.contractIdentifier)
+        assertEquals(64, mod.licensingSealSha256.length)
+
+        // Verify MOD-02 contains content://com.termux.files and 268435457 flag bitmask
+        val mod02 = mod.modularityBlocks.first { it.id == "MOD-02" }
+        assertTrue(mod02.codeSnippet.contains("content://com.termux.files"))
+        assertTrue(mod02.codeSnippet.contains("268435457"))
+
+        // Simulate T&C drift -> non-compliant, then self-correct & seal -> compliant with $0.00 recurring fee
+        val drifted = com.example.service.ModularStackAndLicensingEngine.simulateLicensingDrift(mod)
+        assertFalse(drifted.licensingCompliantAll)
+        assertTrue(drifted.recurringFeeUsd > 0f)
+
+        val healed = com.example.service.ModularStackAndLicensingEngine.selfCorrectAndSealLicensing(drifted)
+        assertTrue(healed.licensingCompliantAll)
+        assertEquals(0.00f, healed.recurringFeeUsd, 0.0001f)
+        assertTrue(healed.licensingClauses.all { it.isCompliant })
+        assertEquals(64, healed.licensingSealSha256.length)
+
+        // Verify Allowed to Compare 2FA & Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION)
+        assertEquals("Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION)", healed.metallurgiaThemeDesignTactic)
+        assertTrue(healed.twoFactorComparison.allowedToCompare2fa)
+        assertTrue(healed.twoFactorComparison.factorsMatchVerified)
+        assertTrue(healed.twoFactorComparison.composite2faPairingToken.startsWith("2FA-"))
+        assertTrue(healed.twoFactorComparison.expectedTerminalOutputTrace.contains("Allowed to Compare 2FA      : TRUE [MATCH CONFIRMED]"))
+        assertTrue(healed.twoFactorComparison.expectedTerminalOutputTrace.contains("check:pass:true_only"))
+
+        val muMetalState = com.example.service.ModularStackAndLicensingEngine.selectMetallurgiaPreset(
+            healed,
+            com.example.service.MetallurgiaSteelAlloyPreset.MU_METAL_PERMEABILITY_SHIELD
+        )
+        assertEquals(1.001f, muMetalState.activeMetallurgiaPreset.relativePermeabilityMuR, 0.0001f)
+        assertTrue(muMetalState.twoFactorComparison.expectedTerminalOutputTrace.contains("MU-METAL // FARADAY CAGE"))
+    }
 }

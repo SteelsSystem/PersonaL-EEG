@@ -419,6 +419,16 @@ fun Sy4EegAxiomApp(
                             onStepDecayEpoch = viewModel::stepCorporateDecayEpoch,
                             onSelectOwnDevLogicNode = viewModel::selectOwnDevLogicNode,
                             onExecuteUnifiedDeployAndSealWhitepaper = viewModel::executeUnifiedDeployAndSealWhitepaper,
+                            onSelectModularityBlock = viewModel::selectModularityBlock,
+                            onSelectEnvComparisonFilter = viewModel::selectEnvComparisonFilter,
+                            onSelectMarketingPillar = viewModel::selectMarketingPillar,
+                            onSimulateLicensingDrift = viewModel::simulateLicensingTcDrift,
+                            onSelfCorrectAndSealLicensing = viewModel::executeLicensingSelfCorrectionAndSeal,
+                            onLoadModularityBlockIntoVerifier = viewModel::loadModularityBlockIntoVerifier,
+                            onSelectTargetDeviceMode = viewModel::selectTargetDeviceMode,
+                            onSelectMetallurgiaPreset = viewModel::selectMetallurgiaPreset,
+                            onEngageMetallurgiaAntiMagPosition = viewModel::engageMetallurgiaAntiMagPosition,
+                            onVerifyAndSeal2faDeployLogic = viewModel::verifyAndSeal2faDeployLogic,
                             onCopyToast = viewModel::showToast
                         )
 
