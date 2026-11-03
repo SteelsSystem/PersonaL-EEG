@@ -11,9 +11,6 @@
 **Target Environment:** Android 14+ (API 34/36), Phone Linux Environments (Termux / PRoot-Distro / Chroot), Raspberry Pi 4 Model B (ARM64 / aarch64), Debian/Ubuntu  
 **Deployment Invariant:** `check:pass:true_only` // Zero External Egress // 100% On-Device Enclave  
 
----
-vlcek(zav)cobrasecurity.cz
-
 ## 3. High-Level Architecture Overview
 
 The system operates strictly on-device across three functional planes:
