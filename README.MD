@@ -1,3 +1,38 @@
+
+V rovině zpracování biometrických a spektrometrických signálů v architekturách **SY4-EEG BlockMind**, **Portfolio Relay** a **CobraLayer** představuje kombinace **Alpha comb s EEG H-L (High-Low)** frekvenčním dělením klíčový prvek pasivní telemetrie a filtráže signálu.
+
+---
+
+### 1. Frekvenční pásma a dělení EEG Alpha (H-L)
+
+V rámci EEG profilování a spektrometrie se pásmo Alpha (obvykle **8–12 Hz**) dělí na dvě funkční složky:
+* **Low-Alpha (8–10 Hz)**: Odpovídá obecnému útlumu, vnitřní inhibici a klidovému stavu.
+* **High-Alpha (10–12 Hz)**: Odpovídá selektivní pozornosti, kognitivnímu zpracování a úlohám zaměřeným na paměť.
+
+Při zpracování kombinovaného signálu se používá **hřebenový filtr (Comb Filter)** a **pásmová demultiplexáž (Demuxer)**, která odděluje nízké (Low) a vysoké (High) složky frekvenčního spektra [1, 2].
+
+---
+
+### 2. Spektrální demultiplexáž a vyhrazovací filtr (EMA)
+
+Pozorovatelský modul (Observer Telemetry) přivádí audio/EEG signál do spektrálního demultiplexoru a provádí vyhlazení dat pomocí **exponenciálního plovoucího průměru (EMA)** [1, 3]:
+
+\\[S_t = \alpha \cdot X_t + (1 - \alpha) \cdot S_{t-1}\\]
+
+Kde:
+* \\(X_t\\) je okamžitá vzorkovaná amplituda pásma v čase \\(t\\),
+* \\(S_t\\) je vyhlazený výstupní parametr,
+* \\(\alpha\\) je koeficient vyhlazení (\\(\alpha \in (0, 1]\\)) [3].
+
+Vyhlazená data se ukládají do volatilního **152bajtového paměťového bloku (152-byte state slab)** pro vykreslení v reálném čase na diagnostickém dashboardu [1, 3].
+
+---
+
+### 3. Architektonická stěna (Observer Isolation)
+
+V systémech **SY4-EEG BlockMind** a **Portfolio Relay** platí přísné bezpečnostní pravidlo izolace telemetrie:
+* **Pasivní pozorovatel**: Zpracování spektrálních pásem slouží výhradně pro vizualizaci a detekci odchylek v reálném čase [1, 2].
+* **Strict Architectural Wall**: Výstupy z hřebenové filtráže nebo spektrální analýzy **nikdy automaticky neodemykají autorizační neboli vysílací interlock** [1, 4]. Uvolnění řídicích bran vyžaduje manuální potvrzení operatora nebo ověřený API adaptér [4].
 Here is the unified articulation (**corticulation**) of the entire system architecture, memory model, mobile runtime, build automation, and CI/CD security pipeline established across our engineering workflows:
 
 ---
