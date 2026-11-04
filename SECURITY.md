@@ -4,7 +4,28 @@
 **Security Protocol**: `AX-IS-T // [TREAT SECURITY THREAT:REDLINE]`  
 **Gate Assertion**: `check:pass:true_only`  
 **Contractual Regime**: `S:OpenSource(nosubs!-asis)Contract!` (`SPDX-License-Identifier: MIT OR Apache-2.0`)
+HEXA // Kotlin-DSL HTML Offline Engine & ODM Inspector
 
+Tento soubor (hexagonal_kotlin_html_engine.html) představuje vzduchotěsně izolovaný (air-gapped) offline nástroj, který simuluje Kotlin-DSL (Domain Specific Language) kompilaci a renderování HTML stránek pro ekosystém WEB3TV & ODM Control Surface.
+
+Klíčové vlastnosti aplikace:
+
+Zero-CDN / Offline architektura:
+Acelá aplikace běží v jednom jediném souboru bez závislostí na externích knihovnách nebo internetovém připojení. Respektuje hardwarové a softwarové požadavky na maximální suverenitu a bezpečnost.
+
+Třípanelové pracovní prostředí:
+
+Levý panel: Obsahuje Kotlin-DSL kód (HexaHtmlBuilder.kt), kde můžete definovat strukturu dashboardu pomocí funkcí jako html, head, body, div, h1, p atd.
+
+Prostřední panel: Zobrazuje vygenerovaný čistý HTML kód, který je připraven k okamžitému exportu nebo použití.
+
+Pravý panel: Poskytuje živý náhled (DOM Sandbox), kde se okamžitě vykresluje výsledek transpilace.
+
+ODM Protokol & Registr 0x200F:
+Interfejs integruje telemetrické prvky zajišťující paritu a ověření stavu systému v režimu Fail-Closed.
+
+Interaktivní konzole:
+Spodní logovací okno poskytuje zpětnou vazbu v reálném čase o úspěšnosti kompilace, případných chybách a synchronizaci náhledu.
 ---
 
 ## 1. Supported Versions & Target Runtimes
