@@ -44,7 +44,10 @@ import androidx.compose.ui.unit.sp
 import com.example.model.ContractPhase
 import com.example.model.RgbCognitiveMode
 import com.example.service.AsCoreStreamProfile
+import com.example.service.IntakeCantJumpMode
+import com.example.service.OdmAlignmentTarget
 import com.example.service.RgbChannelAxis
+import com.example.service.SonicSoundSwapMode
 import com.example.ui.theme.HudBorderCyan
 import com.example.ui.theme.NeonAmber
 import com.example.ui.theme.NeonCyan
@@ -82,7 +85,20 @@ fun BiometricsHudDeck(
     onSetAsCoreCadenceHz: (Int) -> Unit = {},
     onUpdateAsCoreChannelGains: (Float, Float, Float) -> Unit = { _, _, _ -> },
     onInjectAsCorePulse: (RgbChannelAxis) -> Unit = {},
-    onOpenBlockMindDashboard: () -> Unit = {},
+    onToggleRgbKnowable: () -> Unit = {},
+    onToggleFrqKnowable: () -> Unit = {},
+    onToggleAtlasLostPath: () -> Unit = {},
+    onReanchorAtlasAndRestoreKnowability: () -> Unit = {},
+    onSelectCenterFileLine: (String) -> Unit = {},
+    onToggleOdmGateStatus: () -> Unit = {},
+    onExecuteOdmAllowlistCommand: (String) -> Unit = {},
+    onToggleOrIfLie: () -> Unit = {},
+    onSelectIntakeJumpMode: (IntakeCantJumpMode) -> Unit = {},
+    onUpdateIntakeCantAngle: (Float) -> Unit = {},
+    onTriggerSonicSoundSwapTranslate: () -> Unit = {},
+    onSelectSonicSoundSwapMode: (SonicSoundSwapMode) -> Unit = {},
+    onSelectOdmTargetAndSelfTeach: (OdmAlignmentTarget) -> Unit = {},
+    onCopyToast: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val asCore = state.asCoreFrame
@@ -94,23 +110,24 @@ fun BiometricsHudDeck(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Button(
-            onClick = onOpenBlockMindDashboard,
-            colors = ButtonDefaults.buttonColors(containerColor = NeonCyan.copy(alpha = 0.2f)),
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .minimumInteractiveComponentSize()
-                .border(1.dp, NeonCyan, RoundedCornerShape(10.dp))
-                .testTag("btn_biometrics_open_blockmind_dashboard")
-        ) {
-            Text(
-                text = "OPEN FULL-SCREEN SY4-EEG BLOCKMIND TELEMETRY DASHBOARD",
-                style = MaterialTheme.typography.labelSmall,
-                color = NeonCyan,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        // 00. OPEN INTAKE CANT O-RING // SEE IF NOT RGB OR FRQ KNOWABLE • <or if lie> • SONIC "TRANSLATE" • GOOD STACK
+        AtlasKnowabilityCenterSpineCard(
+            state = state,
+            onToggleRgbKnowable = onToggleRgbKnowable,
+            onToggleFrqKnowable = onToggleFrqKnowable,
+            onToggleAtlasLostPath = onToggleAtlasLostPath,
+            onReanchorAtlasAndRestoreKnowability = onReanchorAtlasAndRestoreKnowability,
+            onSelectCenterFileLine = onSelectCenterFileLine,
+            onToggleOdmGateStatus = onToggleOdmGateStatus,
+            onExecuteOdmAllowlistCommand = onExecuteOdmAllowlistCommand,
+            onToggleOrIfLie = onToggleOrIfLie,
+            onSelectIntakeJumpMode = onSelectIntakeJumpMode,
+            onUpdateIntakeCantAngle = onUpdateIntakeCantAngle,
+            onTriggerSonicSoundSwapTranslate = onTriggerSonicSoundSwapTranslate,
+            onSelectSonicSoundSwapMode = onSelectSonicSoundSwapMode,
+            onSelectOdmTargetAndSelfTeach = onSelectOdmTargetAndSelfTeach,
+            onCopyToast = onCopyToast
+        )
 
         // 0. as[core] REAL-TIME RGB BIOMETRIC STREAM SERVICE LAYER -> BLOCKMIND DASHBOARD DRIVER
         HudCard(

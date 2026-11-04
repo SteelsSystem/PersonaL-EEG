@@ -46,6 +46,7 @@ import com.example.data.SpectDatabase
 import com.example.data.SpectRepository
 import com.example.model.HudTab
 import com.example.sensor.BiometricSensorEngine
+import com.example.service.ProtocolOWireEvent
 import com.example.ui.components.AsIfScreenShareBestWorkModal
 import com.example.ui.components.AxiomBottomNavigationDock
 import com.example.ui.components.AxiomGlSurfaceViewport
@@ -55,10 +56,11 @@ import com.example.ui.components.BiometricsHudDeck
 import com.example.ui.components.CodexAndShaHudDeck
 import com.example.ui.components.EmbeddedHtmlProfilerModal
 import com.example.ui.components.GlslSourceCodeModal
+import com.example.ui.components.ProtocolOCertSublayerModal
+import com.example.ui.components.ProtocolOSublayerGateModal
 import com.example.ui.components.ScreenFilterAntStudioModal
 import com.example.ui.components.ScreenFilterAntViewportOverlay
 import com.example.ui.components.SpectLocalStatsHudDeck
-import com.example.ui.components.Sy4EegBlockMindDashboardScreen
 import com.example.ui.components.TunnelHudDeck
 import com.example.ui.components.UnicriticHudDeck
 import com.example.ui.components.WidescreenTunnelStageBar
@@ -67,17 +69,10 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.ObsidianBg
 import com.example.viewmodel.AxiomViewModel
-import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.recaptcha.RecaptchaAppCheckProviderFactory
-
-private const val TAG = "AppCheckInit"
-private const val DEBUG_TOKEN_EXTRA = "FIREBASE_APPCHECK_DEBUG_TOKEN"
-private const val DEBUG_STORE_PREFIX = "com.google.firebase.appcheck.debug.store."
-private const val DEBUG_SECRET_KEY = "com.google.firebase.appcheck.debug.DEBUG_SECRET"
-private const val RECAPTCHA_SITE_KEY_RES = "recaptcha_site_key"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,51 +94,35 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-fun configureAppCheck(context: Context, intent: Intent?) {
+private fun configureAppCheck(context: Context, intent: Intent?) {
+    val prefs = context.getSharedPreferences("app_check_debug", Context.MODE_PRIVATE)
+    intent?.getStringExtra("app_check_debug_token")?.let { token ->
+        prefs.edit().putString("debug_token", token).commit()
+    }
+    val debugToken = prefs.getString("debug_token", null)
+    val siteKey = try {
+        val resId = context.resources.getIdentifier("recaptcha_site_key", "string", context.packageName)
+        if (resId != 0) context.getString(resId) else ""
+    } catch (_: Exception) {
+        ""
+    }
+
     try {
-        if (FirebaseApp.getApps(context).isEmpty()) {
-            FirebaseApp.initializeApp(context)
-        }
-
-        if (BuildConfig.DEBUG) {
-            val debugToken = intent?.getStringExtra(DEBUG_TOKEN_EXTRA)
-
-            if (!debugToken.isNullOrEmpty()) {
-                val persistenceKey = FirebaseApp.getInstance().persistenceKey
-                val prefs = context.getSharedPreferences(
-                    "$DEBUG_STORE_PREFIX$persistenceKey",
-                    Context.MODE_PRIVATE
+        FirebaseApp.initializeApp(context)
+        val appCheck = FirebaseAppCheck.getInstance()
+        when {
+            !debugToken.isNullOrEmpty() -> {
+                System.setProperty("firebase.appcheck.debug.secret", debugToken)
+                appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+            }
+            siteKey.isNotEmpty() -> {
+                appCheck.installAppCheckProviderFactory(
+                    RecaptchaAppCheckProviderFactory.getInstance(siteKey)
                 )
-                prefs.edit()
-                    .putString(DEBUG_SECRET_KEY, debugToken)
-                    .commit()
-                Log.d(TAG, "App Check debug secret configured successfully.")
-            } else {
-                Log.w(TAG, "No debug token found in Intent extra.")
-            }
-
-            FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-                DebugAppCheckProviderFactory.getInstance()
-            )
-            Log.d(TAG, "DebugAppCheckProviderFactory installed.")
-        } else {
-            val resId = context.resources.getIdentifier(RECAPTCHA_SITE_KEY_RES, "string", context.packageName)
-            if (resId != 0) {
-                val siteKey = context.getString(resId)
-                if (siteKey.isNotBlank()) {
-                    FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
-                        RecaptchaAppCheckProviderFactory.getInstance(siteKey)
-                    )
-                    Log.d(TAG, "RecaptchaAppCheckProviderFactory installed.")
-                } else {
-                    Log.e(TAG, "recaptcha_site_key resource string is blank.")
-                }
-            } else {
-                Log.e(TAG, "recaptcha_site_key string resource not found in package.")
             }
         }
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to initialize Firebase App Check", e)
+    } catch (_: Exception) {
+        // Safe local fallback if Firebase App Check is unavailable in local unit test environments
     }
 }
 
@@ -214,7 +193,9 @@ fun Sy4EegAxiomApp(
                 onToggleLandscapeLock = viewModel::toggleWidescreenLandscapeLock,
                 onOpenSpectSensorDashboard = { viewModel.selectTab(HudTab.SPECT) },
                 onOpenCodexWhitepaper = { viewModel.selectTab(HudTab.CODEX) },
-                onOpenBlockMindDashboard = { viewModel.setShowBlockMindDashboard(true) }
+                onOpenProtocolOSublayerGate = {
+                    viewModel.dispatchProtocolOWireEvent(ProtocolOWireEvent.OpenSublayerGate)
+                }
             )
         },
         bottomBar = {
@@ -274,6 +255,13 @@ fun Sy4EegAxiomApp(
                             onToggleRotationDir = viewModel::toggleRotationDirection,
                             onToggleEegSync = viewModel::toggleSyncRotatingFrqWithEeg,
                             onToggleLandscapeLock = viewModel::toggleWidescreenLandscapeLock,
+                            onToggleRgbKnowable = viewModel::toggleRgbKnowable,
+                            onToggleFrqKnowable = viewModel::toggleFrqKnowable,
+                            onToggleAtlasLostPath = viewModel::toggleAtlasLostPath,
+                            onToggleOrIfLie = viewModel::toggleOrIfLieDetector,
+                            onCycleIntakeJumpMode = viewModel::cycleIntakeCantJumpMode,
+                            onTriggerSonicSoundSwapTranslate = viewModel::triggerSonicSoundSwapTranslate,
+                            onReanchorAtlasAndRestoreKnowability = viewModel::reanchorAtlasAndRestoreKnowability,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -335,48 +323,77 @@ fun Sy4EegAxiomApp(
                                 onSelectInterconnectNode = viewModel::selectLocalInterconnectNode,
                                 onExecuteServerlessLocalDeploy = viewModel::executeServerlessLocalDeploy,
                                 onInjectEgressFault = viewModel::injectNonLocalEgressFault,
-                                onRemediateLocalOnly = viewModel::remediateToLocalOnlyTrue
+                                onRemediateLocalOnly = viewModel::remediateToLocalOnlyTrue,
+                                onToggleRgbKnowable = viewModel::toggleRgbKnowable,
+                                onToggleFrqKnowable = viewModel::toggleFrqKnowable,
+                                onToggleAtlasLostPath = viewModel::toggleAtlasLostPath,
+                                onReanchorAtlasAndRestoreKnowability = viewModel::reanchorAtlasAndRestoreKnowability,
+                                onSelectCenterFileLine = viewModel::selectCenterFileLine,
+                                onToggleOdmGateStatus = viewModel::toggleOdmGateStatus,
+                                onExecuteOdmAllowlistCommand = viewModel::executeOdmAllowlistCommand,
+                                onToggleOrIfLie = viewModel::toggleOrIfLieDetector,
+                                onSelectIntakeJumpMode = viewModel::selectIntakeCantJumpMode,
+                                onUpdateIntakeCantAngle = viewModel::updateIntakeCantAngleDeg,
+                                onTriggerSonicSoundSwapTranslate = viewModel::triggerSonicSoundSwapTranslate,
+                                onSelectSonicSoundSwapMode = viewModel::selectSonicSoundSwapMode,
+                                onSelectOdmTargetAndSelfTeach = viewModel::selectOdmTargetAndSelfTeach,
+                                onSealAtlasOdmToCodex = viewModel::sealAtlasOdmToCodex,
+                                onProtocolOWireEvent = viewModel::dispatchProtocolOWireEvent,
+                                onSealProtocolOToCodex = viewModel::sealProtocolOToCodex
                             )
 
-                        HudTab.BIOMETRICS -> BiometricsHudDeck(
-                            state = state,
-                            onSelectRgbMode = viewModel::selectRgbMode,
-                            onToggleBlockMind = viewModel::toggleBlockMindStasis,
-                            onReorderOsaMatrix = viewModel::reorderOsaMatrixNow,
-                            onUpdateDelta = { viewModel.updateEegBands(delta = it) },
-                            onUpdateTheta = { viewModel.updateEegBands(theta = it) },
-                            onUpdateAlpha = { viewModel.updateEegBands(alpha = it) },
-                            onUpdateBeta = { viewModel.updateEegBands(beta = it) },
-                            onUpdateGamma = { viewModel.updateEegBands(gamma = it) },
-                            onApplyBiometricPreset = viewModel::applyBiometricPreset,
-                            onTriggerBleScan = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !sensorEngine.hasBlePermissions()) {
-                                    blePermissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.BLUETOOTH_SCAN,
-                                            Manifest.permission.BLUETOOTH_CONNECT
+                            HudTab.BIOMETRICS -> BiometricsHudDeck(
+                                state = state,
+                                onSelectRgbMode = viewModel::selectRgbMode,
+                                onToggleBlockMind = viewModel::toggleBlockMindStasis,
+                                onReorderOsaMatrix = viewModel::reorderOsaMatrixNow,
+                                onUpdateDelta = { viewModel.updateEegBands(delta = it) },
+                                onUpdateTheta = { viewModel.updateEegBands(theta = it) },
+                                onUpdateAlpha = { viewModel.updateEegBands(alpha = it) },
+                                onUpdateBeta = { viewModel.updateEegBands(beta = it) },
+                                onUpdateGamma = { viewModel.updateEegBands(gamma = it) },
+                                onApplyBiometricPreset = viewModel::applyBiometricPreset,
+                                onTriggerBleScan = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !sensorEngine.hasBlePermissions()) {
+                                        blePermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.BLUETOOTH_SCAN,
+                                                Manifest.permission.BLUETOOTH_CONNECT
+                                            )
                                         )
-                                    )
-                                } else {
-                                    sensorEngine.toggleBleNeuroScan()
-                                }
-                            },
-                            onToggleMockStream = viewModel::toggleMockBiometricStream,
-                            onTriggerSynapticBurst = viewModel::triggerMockSynapticBurst,
-                            onSetBlockMindPolarity = viewModel::setBlockMindPolarityFlux,
-                            onStepBlockMindPolarity = viewModel::stepBlockMindPolarity,
-                            onSelectAsCoreProfile = viewModel::selectAsCoreProfile,
-                            onToggleAsCoreStream = viewModel::toggleAsCoreStream,
-                            onToggleAsCoreAutoDriveBlockMind = viewModel::toggleAsCoreAutoDriveBlockMind,
-                            onSetAsCoreCadenceHz = viewModel::setAsCoreCadenceHz,
-                            onUpdateAsCoreChannelGains = { r, g, b ->
-                                viewModel.updateAsCoreChannelGains(r, g, b)
-                            },
-                            onInjectAsCorePulse = { axis ->
-                                viewModel.injectAsCoreChromaticPulse(axis)
-                            },
-                            onOpenBlockMindDashboard = { viewModel.setShowBlockMindDashboard(true) }
-                        )
+                                    } else {
+                                        sensorEngine.toggleBleNeuroScan()
+                                    }
+                                },
+                                onToggleMockStream = viewModel::toggleMockBiometricStream,
+                                onTriggerSynapticBurst = viewModel::triggerMockSynapticBurst,
+                                onSetBlockMindPolarity = viewModel::setBlockMindPolarityFlux,
+                                onStepBlockMindPolarity = viewModel::stepBlockMindPolarity,
+                                onSelectAsCoreProfile = viewModel::selectAsCoreProfile,
+                                onToggleAsCoreStream = viewModel::toggleAsCoreStream,
+                                onToggleAsCoreAutoDriveBlockMind = viewModel::toggleAsCoreAutoDriveBlockMind,
+                                onSetAsCoreCadenceHz = viewModel::setAsCoreCadenceHz,
+                                onUpdateAsCoreChannelGains = { r, g, b ->
+                                    viewModel.updateAsCoreChannelGains(r, g, b)
+                                },
+                                onInjectAsCorePulse = { axis ->
+                                    viewModel.injectAsCoreChromaticPulse(axis)
+                                },
+                                onToggleRgbKnowable = viewModel::toggleRgbKnowable,
+                                onToggleFrqKnowable = viewModel::toggleFrqKnowable,
+                                onToggleAtlasLostPath = viewModel::toggleAtlasLostPath,
+                                onReanchorAtlasAndRestoreKnowability = viewModel::reanchorAtlasAndRestoreKnowability,
+                                onSelectCenterFileLine = viewModel::selectCenterFileLine,
+                                onToggleOdmGateStatus = viewModel::toggleOdmGateStatus,
+                                onExecuteOdmAllowlistCommand = viewModel::executeOdmAllowlistCommand,
+                                onToggleOrIfLie = viewModel::toggleOrIfLieDetector,
+                                onSelectIntakeJumpMode = viewModel::selectIntakeCantJumpMode,
+                                onUpdateIntakeCantAngle = viewModel::updateIntakeCantAngleDeg,
+                                onTriggerSonicSoundSwapTranslate = viewModel::triggerSonicSoundSwapTranslate,
+                                onSelectSonicSoundSwapMode = viewModel::selectSonicSoundSwapMode,
+                                onSelectOdmTargetAndSelfTeach = viewModel::selectOdmTargetAndSelfTeach,
+                                onCopyToast = viewModel::showToast
+                            )
 
                         HudTab.UNICRITIC -> UnicriticHudDeck(
                             state = state,
@@ -419,16 +436,6 @@ fun Sy4EegAxiomApp(
                             onStepDecayEpoch = viewModel::stepCorporateDecayEpoch,
                             onSelectOwnDevLogicNode = viewModel::selectOwnDevLogicNode,
                             onExecuteUnifiedDeployAndSealWhitepaper = viewModel::executeUnifiedDeployAndSealWhitepaper,
-                            onSelectModularityBlock = viewModel::selectModularityBlock,
-                            onSelectEnvComparisonFilter = viewModel::selectEnvComparisonFilter,
-                            onSelectMarketingPillar = viewModel::selectMarketingPillar,
-                            onSimulateLicensingDrift = viewModel::simulateLicensingTcDrift,
-                            onSelfCorrectAndSealLicensing = viewModel::executeLicensingSelfCorrectionAndSeal,
-                            onLoadModularityBlockIntoVerifier = viewModel::loadModularityBlockIntoVerifier,
-                            onSelectTargetDeviceMode = viewModel::selectTargetDeviceMode,
-                            onSelectMetallurgiaPreset = viewModel::selectMetallurgiaPreset,
-                            onEngageMetallurgiaAntiMagPosition = viewModel::engageMetallurgiaAntiMagPosition,
-                            onVerifyAndSeal2faDeployLogic = viewModel::verifyAndSeal2faDeployLogic,
                             onCopyToast = viewModel::showToast
                         )
 
@@ -472,6 +479,21 @@ fun Sy4EegAxiomApp(
                 }
             }
         }
+    }
+
+    if (state.protocolOState.gateModalOpen) {
+        ProtocolOSublayerGateModal(
+            state = state,
+            onWireEvent = viewModel::dispatchProtocolOWireEvent
+        )
+    }
+
+    if (state.protocolOState.volatileCertificate != null) {
+        ProtocolOCertSublayerModal(
+            state = state,
+            onWireEvent = viewModel::dispatchProtocolOWireEvent,
+            onCopyToast = viewModel::showToast
+        )
     }
 
     if (state.showGlslModal) {
@@ -523,26 +545,6 @@ fun Sy4EegAxiomApp(
             onLaunchWorkInViewport = viewModel::launchBestWorkInViewport,
             onVerifyAndSealWork = viewModel::verifyAndSealBestWork,
             onCopyToast = viewModel::showToast
-        )
-    }
-
-    if (state.showBlockMindDashboard) {
-        Sy4EegBlockMindDashboardScreen(
-            state = state,
-            onNavigateBack = { viewModel.setShowBlockMindDashboard(false) },
-            onToggleMockStream = viewModel::toggleMockBiometricStream,
-            onTriggerSynapticBurst = viewModel::triggerMockSynapticBurst,
-            onToggleBlockMindStasis = viewModel::toggleBlockMindStasis,
-            onSetBlockMindPolarity = viewModel::setBlockMindPolarityFlux,
-            onSelectRgbMode = viewModel::selectRgbMode,
-            onApplyBiometricPreset = viewModel::applyBiometricPreset,
-            onUpdateDelta = { viewModel.updateEegBands(delta = it) },
-            onUpdateTheta = { viewModel.updateEegBands(theta = it) },
-            onUpdateAlpha = { viewModel.updateEegBands(alpha = it) },
-            onUpdateBeta = { viewModel.updateEegBands(beta = it) },
-            onUpdateGamma = { viewModel.updateEegBands(gamma = it) },
-            onReorderOsaMatrix = viewModel::reorderOsaMatrixNow,
-            onInjectAsCorePulse = { axis -> viewModel.injectAsCoreChromaticPulse(axis) }
         )
     }
 }

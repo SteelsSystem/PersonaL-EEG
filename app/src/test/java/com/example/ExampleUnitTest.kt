@@ -215,47 +215,262 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun modularStackAndLicensingEngine_verifiesModularityBlocks_termuxMatrix_andSelfCorrectingTc() {
+    fun atlasKnowabilityAndOdmEngine_discriminatesRgbAndFrqKnowability_andEngagesAtlasRedOnLostPath() {
         val state = AxiomUiState()
-        val mod = state.modularStackLicensingState
-        assertEquals(6, mod.modularityBlocks.size)
-        assertEquals(10, mod.comparisonRows.size)
-        assertEquals(4, mod.marketingPillars.size)
-        assertEquals(6, mod.licensingClauses.size)
-        assertTrue(mod.licensingCompliantAll)
-        assertEquals(0.00f, mod.recurringFeeUsd, 0.0001f)
-        assertEquals("S:OpenSource(nosubs!-asis)Contract!", mod.contractIdentifier)
-        assertEquals(64, mod.licensingSealSha256.length)
+        val initial = state.atlasKnowabilityState
+        assertTrue(initial.rgbKnowable)
+        assertTrue(initial.frqKnowable)
+        assertFalse(initial.onLostPath)
+        assertFalse(initial.asAtlasRedActive)
+        assertEquals(5, initial.centerFileLines.size)
 
-        // Verify MOD-02 contains content://com.termux.files and 268435457 flag bitmask
-        val mod02 = mod.modularityBlocks.first { it.id == "MOD-02" }
-        assertTrue(mod02.codeSnippet.contains("content://com.termux.files"))
-        assertTrue(mod02.codeSnippet.contains("268435457"))
-
-        // Simulate T&C drift -> non-compliant, then self-correct & seal -> compliant with $0.00 recurring fee
-        val drifted = com.example.service.ModularStackAndLicensingEngine.simulateLicensingDrift(mod)
-        assertFalse(drifted.licensingCompliantAll)
-        assertTrue(drifted.recurringFeeUsd > 0f)
-
-        val healed = com.example.service.ModularStackAndLicensingEngine.selfCorrectAndSealLicensing(drifted)
-        assertTrue(healed.licensingCompliantAll)
-        assertEquals(0.00f, healed.recurringFeeUsd, 0.0001f)
-        assertTrue(healed.licensingClauses.all { it.isCompliant })
-        assertEquals(64, healed.licensingSealSha256.length)
-
-        // Verify Allowed to Compare 2FA & Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION)
-        assertEquals("Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION)", healed.metallurgiaThemeDesignTactic)
-        assertTrue(healed.twoFactorComparison.allowedToCompare2fa)
-        assertTrue(healed.twoFactorComparison.factorsMatchVerified)
-        assertTrue(healed.twoFactorComparison.composite2faPairingToken.startsWith("2FA-"))
-        assertTrue(healed.twoFactorComparison.expectedTerminalOutputTrace.contains("Allowed to Compare 2FA      : TRUE [MATCH CONFIRMED]"))
-        assertTrue(healed.twoFactorComparison.expectedTerminalOutputTrace.contains("check:pass:true_only"))
-
-        val muMetalState = com.example.service.ModularStackAndLicensingEngine.selectMetallurgiaPreset(
-            healed,
-            com.example.service.MetallurgiaSteelAlloyPreset.MU_METAL_PERMEABILITY_SHIELD
+        // 1. Force RGB Not Knowable -> must engage As Atlas (RED) On Lost Path
+        val rgbBlind = com.example.service.AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = initial.copy(forceRgbUnknowable = true),
+            asCoreFrame = state.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = state.eegBands,
+            dominantHz = state.dominantFrequencyHz,
+            rotatingFrqHz = state.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = state.phaseCoherencePct,
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = state.localInterconnectState,
+            spectSensorHealthPct = 98,
+            simTimeSec = 1.2f
         )
-        assertEquals(1.001f, muMetalState.activeMetallurgiaPreset.relativePermeabilityMuR, 0.0001f)
-        assertTrue(muMetalState.twoFactorComparison.expectedTerminalOutputTrace.contains("MU-METAL // FARADAY CAGE"))
+        assertFalse(rgbBlind.rgbKnowable)
+        assertTrue(rgbBlind.frqKnowable)
+        assertTrue(rgbBlind.onLostPath)
+        assertTrue(rgbBlind.asAtlasRedActive)
+        assertTrue(rgbBlind.atlasStateBadge.contains("AS ATLAS (RED)"))
+
+        // 2. Force FRQ Not Knowable -> must engage As Atlas (RED) On Lost Path
+        val frqBlind = com.example.service.AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = initial.copy(forceFrqUnknowable = true),
+            asCoreFrame = state.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = state.eegBands,
+            dominantHz = state.dominantFrequencyHz,
+            rotatingFrqHz = state.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = state.phaseCoherencePct,
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = state.localInterconnectState,
+            spectSensorHealthPct = 98,
+            simTimeSec = 2.4f
+        )
+        assertTrue(frqBlind.rgbKnowable)
+        assertFalse(frqBlind.frqKnowable)
+        assertTrue(frqBlind.onLostPath)
+        assertTrue(frqBlind.asAtlasRedActive)
+
+        // 3. Verify ODM Guarded Command Allowlist & Register 0x200F Parity
+        val (_, exitOff, blockedOff) = com.example.service.AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand("uname", gateStatusOn = false)
+        assertEquals(3, exitOff)
+        assertEquals(1, blockedOff)
+
+        val (_, exitOk, blockedOk) = com.example.service.AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand("uname", gateStatusOn = true)
+        assertEquals(0, exitOk)
+        assertEquals(0, blockedOk)
+
+        val (_, enforcedHex, parityBit) = com.example.service.AtlasKnowabilityAndOdmEngine.enforceRegister0x200F(0x0000)
+        assertEquals("0xA00F", enforcedHex)
+        assertEquals(1, parityBit)
+
+        // 4. Verify <or if lie> detection engages AS ATLAS (RED) and Open Intake Cant O-Ring Jump In/Out
+        assertTrue(initial.centerLinesHiddenOpenAperture)
+        assertFalse(initial.orIfLieDetected)
+        val lieDetected = com.example.service.AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = initial.copy(
+                forceOrIfLieDetected = true,
+                intakeCantJumpMode = com.example.service.IntakeCantJumpMode.JUMP_IN_CORE,
+                intakeCantAngleDeg = 32f
+            ),
+            asCoreFrame = state.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = state.eegBands,
+            dominantHz = state.dominantFrequencyHz,
+            rotatingFrqHz = state.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = state.phaseCoherencePct,
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = state.localInterconnectState,
+            spectSensorHealthPct = 98,
+            simTimeSec = 3.0f
+        )
+        assertTrue(lieDetected.orIfLieDetected)
+        assertTrue(lieDetected.onLostPath)
+        assertTrue(lieDetected.asAtlasRedActive)
+        assertEquals(1.42f, lieDetected.effectiveJumpZoomFactor, 0.001f)
+        assertFalse(lieDetected.isGoodStack)
+
+        // 5. Verify Sonic Sound Swap "translate" and Self-Teaching Good Stack Autodidact
+        val goodStackState = com.example.service.AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = initial.copy(
+                sonicSoundSwapTranslateActive = true,
+                sonicSoundSwapMode = com.example.service.SonicSoundSwapMode.CHROMA_SYNESTHESIA_CASCADE,
+                intakeCantJumpMode = com.example.service.IntakeCantJumpMode.JUMP_OUT_ORBIT,
+                selectedOdmTarget = com.example.service.OdmAlignmentTarget.TARGET_C_RUST_DSP
+            ),
+            asCoreFrame = state.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = state.eegBands,
+            dominantHz = state.dominantFrequencyHz,
+            rotatingFrqHz = state.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = state.phaseCoherencePct,
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = state.localInterconnectState,
+            spectSensorHealthPct = 98,
+            simTimeSec = 4.0f
+        )
+        assertTrue(goodStackState.isGoodStack)
+        assertTrue(goodStackState.goodStackScorePct >= 95)
+        assertEquals(0.76f, goodStackState.effectiveJumpZoomFactor, 0.001f)
+        assertTrue(goodStackState.sonicTranslateStatusLabel.contains("translate"))
+        assertTrue(goodStackState.selfTeachStatusBanner.contains("GOOD STACK"))
+    }
+
+    @Test
+    fun protocolO_integrityCore2026_volatileGate_audiusKeyless_and_certSublayer_verified() {
+        val engine = com.example.service.ProtocolOIntegrityCoreEngine
+        engine.purgeVolatileKey()
+        assertFalse(engine.isOrbKeyActive())
+
+        // 1. _gate commit & purge (commit: 9fe2e76 — volatile in-memory only)
+        assertTrue(engine.commitVolatileKey("volatile-secret-o-gate-key"))
+        assertTrue(engine.isOrbKeyActive())
+        engine.purgeVolatileKey()
+        assertFalse(engine.isOrbKeyActive())
+
+        // 2. _util.shortHash & _util.extractStructure (commit: ab124cf)
+        val hash = engine.shortHash("protocol-o-2026")
+        assertTrue(hash.startsWith("0x"))
+        assertEquals(10, hash.length)
+
+        // 3. _engine.audius(query) — keyless REST API integration + 7-Band Sonic "translate" drive
+        val (audiusJson, track) = engine.executeAudiusKeyless(
+            query = "hex reflex sonic translate",
+            preset = com.example.service.NetworkProbePreset.AUDIUS_TRACKS_SEARCH
+        )
+        assertTrue(audiusJson.contains("_engine.audius"))
+        assertTrue(audiusJson.contains("ZERO_KEY_PERMISSIONLESS"))
+        assertTrue(track.streamReady)
+        assertTrue(track.sevenBandDrive.reinstakeGuardSafe)
+
+        val keyTree = engine.extractStructure(audiusJson)
+        assertTrue(keyTree.contains("data"))
+        assertTrue(keyTree.contains("protocol_o_meta"))
+
+        // 4. _cert volatile certificate lifecycle (#cert-sublayer) & Predefined Deterministic Sync
+        val initialProto = engine.buildInitialState()
+        val atlas = com.example.service.AtlasKnowabilityAndOdmState()
+        val contSha = "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"
+        val certA = engine.generateVolatileCertificate(
+            state = initialProto,
+            atlas = atlas,
+            continuitySha256 = contSha
+        )
+        val certB = engine.generateVolatileCertificate(
+            state = initialProto,
+            atlas = atlas,
+            continuitySha256 = contSha
+        )
+        assertTrue(certA.certId.startsWith("CERT-"))
+        assertEquals(certA.certId, certB.certId)
+        assertEquals(certA.sha256Seal, certB.sha256Seal)
+        assertTrue(certA.confidenceScorePct >= 90)
+        assertTrue(certA.volatileBlobJson.contains("VOLATILE_IN_MEMORY_ONLY_ZERO_PERSISTENCE"))
+
+        // 5. Predefined Deterministic Self-Update, Upgrade & Sync reproducibility
+        val syncRun1 = engine.executePredefinedDeterministicSelfUpdateSync(
+            currentState = initialProto,
+            atlas = atlas,
+            continuitySha256 = contSha
+        )
+        val syncRun2 = engine.executePredefinedDeterministicSelfUpdateSync(
+            currentState = initialProto,
+            atlas = atlas,
+            continuitySha256 = contSha
+        )
+        assertTrue(syncRun1.deterministicSyncLocked)
+        assertEquals("v2026.04.12-DET-SYNC", syncRun1.deterministicSyncVersion)
+        assertEquals(6, syncRun1.deterministicUpgradeNodes.size)
+        assertEquals(syncRun1.deterministicVectorShortHash, syncRun2.deterministicVectorShortHash)
+        assertEquals(syncRun1.deterministicVectorSha256, syncRun2.deterministicVectorSha256)
+        assertEquals(syncRun1.volatileCertificate?.sha256Seal, syncRun2.volatileCertificate?.sha256Seal)
+
+        // 6. Emergency Signal-Loss Self-Dependency Reload Pack & 6-Hop Bidirectional Merkle-Mesh
+        val reloaded = engine.executeEmergencySelfDependencyReload(
+            currentState = syncRun1,
+            atlas = atlas,
+            continuitySha256 = contSha,
+            signalLossTriggered = true,
+            triggerReason = "UNIT_TEST_SIGNAL_LOSS_AUTO_RELOAD"
+        )
+        val pack = reloaded.emergencyReloadPack
+        assertTrue(pack.packId.startsWith("EMERG-PACK-"))
+        assertTrue(pack.signalLossDetected)
+        assertTrue(pack.allMeshJointsVerified)
+        assertEquals(6, pack.relayVectorHops.size)
+        assertEquals(64, pack.merkleMeshRootSha256.length)
+        // Verify closed 6-hop ring connectivity (RV-01 -> ... -> RV-06 -> RV-01)
+        assertEquals("ODM-KERNEL", pack.relayVectorHops[0].sourceNodeCode)
+        assertEquals("ODM-KERNEL", pack.relayVectorHops[5].targetNodeCode)
+        pack.relayVectorHops.forEach { hop ->
+            assertEquals(64, hop.sliceSha256.length)
+            assertEquals(64, hop.forwardJointSha256.length)
+            assertEquals(64, hop.reverseJointSha256.length)
+            assertEquals(64, hop.meshJointSha256.length)
+            assertTrue(hop.jointVerified)
+        }
+
+        // 7. EmergencyReloadRepositoryService: O(1) 16-bit signal-loss detection & one-tap reload
+        val repoService = com.example.service.EmergencyReloadRepositoryService
+        assertTrue(repoService.verifyMerkleMeshIntegrity(pack))
+
+        val degradedAtlas = atlas.copy(
+            rgbKnowable = false,
+            onLostPath = true,
+            asAtlasRedActive = true,
+            odmGateStatusOn = false,
+            runBlockedFlag = 1
+        )
+        val nominalInterconnect = com.example.service.ServerlessLocalDeployState()
+        val faultDetect = repoService.detectSignalLossVector(
+            atlas = degradedAtlas,
+            interconnect = nominalInterconnect,
+            proto = initialProto
+        )
+        assertTrue(faultDetect.signalLossDetected)
+        assertTrue(faultDetect.autoReloadRecommended)
+        assertTrue(faultDetect.activeFaultCodes.contains("RV-01:ODM_GATE_DROP"))
+        assertTrue(faultDetect.activeFaultCodes.contains("RV-04:RGB_FRQ_LOST_PATH"))
+
+        val reloadBundle = repoService.executeOneTapOrAutoReload(
+            currentProto = initialProto,
+            currentAtlas = degradedAtlas,
+            currentInterconnect = nominalInterconnect,
+            forwardParse = com.example.model.ForwardTunnelParseResult(),
+            asCoreFrame = com.example.service.AsCoreRgbBiometricFrame(),
+            eegBands = com.example.model.EegBandState(),
+            continuitySha256 = contSha,
+            signalLossTriggered = true,
+            triggerReason = "REPO_SERVICE_AUTO_RELOAD"
+        )
+        assertFalse(reloadBundle.detectionSnapshot.signalLossDetected)
+        assertEquals("0x7F01", reloadBundle.detectionSnapshot.signalHealthMaskHex)
+        assertTrue(reloadBundle.restoredAtlas.rgbKnowable)
+        assertTrue(reloadBundle.restoredAtlas.frqKnowable)
+        assertFalse(reloadBundle.restoredAtlas.asAtlasRedActive)
+        assertTrue(reloadBundle.restoredInterconnect.checkPassTrueOnly)
     }
 }
+
+
+

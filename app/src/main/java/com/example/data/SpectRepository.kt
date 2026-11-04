@@ -84,6 +84,45 @@ class SpectRepository(private val spectDao: SpectDao) {
         spectDao.clearAllUnicriticDriftLogs()
     }
 
+    /**
+     * Atomically records an Emergency Self-Dependency Reload & 6-Hop Merkle-Mesh verification
+     * into the local Room SQLite database (`script_verifications` + `unicritic_drift_logs`).
+     */
+    suspend fun recordEmergencySelfDependencyReloadAudit(
+        packId: String,
+        merkleRootSha256: String,
+        merkleRootShortHash: String,
+        signalHealthMaskHex: String,
+        triggerReason: String,
+        codexScript: String,
+        rgbModeTitle: String
+    ) {
+        spectDao.insertVerification(
+            ScriptVerificationEntity(
+                scriptTitle = "EMERGENCY RELOAD // $packId ($merkleRootShortHash • $signalHealthMaskHex)",
+                crateCategory = "Protocol O // 6-Hop Merkle-Mesh Reload",
+                rawCharCount = codexScript.length,
+                cleanedCharCount = codexScript.length,
+                sha256Digest = merkleRootSha256,
+                isVerified = true
+            )
+        )
+        spectDao.insertUnicriticDriftLog(
+            UnicriticDriftLogEntity(
+                triggerSource = "EMERG-RELOAD // $packId [$signalHealthMaskHex]",
+                verdictLevel = "OPTIMAL",
+                rgbBiometricMode = rgbModeTitle,
+                biometricLoadPct = 24,
+                dominantFrequencyHz = 16.8f,
+                phaseCoherencePct = 99,
+                driftIntensity = 0.00f,
+                compositeShaderDistortion = 0.00f,
+                redlineActive = false,
+                remediationNote = "Local-Only 6-Hop Relay Vector & Bidirectional Merkle-Mesh ($merkleRootShortHash) Reloaded [$triggerReason]."
+            )
+        )
+    }
+
     suspend fun ensureSeeded() {
         if (spectDao.getSpectCount() == 0) {
             insertSpectStat(

@@ -44,6 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.LogSeverity
 import com.example.model.ShaderPreset
+import com.example.service.IntakeCantJumpMode
+import com.example.service.OdmAlignmentTarget
+import com.example.service.ProtocolOWireEvent
+import com.example.service.SonicSoundSwapMode
 import com.example.ui.theme.HudBorderCyan
 import com.example.ui.theme.HudPanelBg
 import com.example.ui.theme.NeonAmber
@@ -111,6 +115,22 @@ fun TunnelHudDeck(
     onExecuteServerlessLocalDeploy: () -> Unit = {},
     onInjectEgressFault: () -> Unit = {},
     onRemediateLocalOnly: () -> Unit = {},
+    onToggleRgbKnowable: () -> Unit = {},
+    onToggleFrqKnowable: () -> Unit = {},
+    onToggleAtlasLostPath: () -> Unit = {},
+    onReanchorAtlasAndRestoreKnowability: () -> Unit = {},
+    onSelectCenterFileLine: (String) -> Unit = {},
+    onToggleOdmGateStatus: () -> Unit = {},
+    onExecuteOdmAllowlistCommand: (String) -> Unit = {},
+    onToggleOrIfLie: () -> Unit = {},
+    onSelectIntakeJumpMode: (IntakeCantJumpMode) -> Unit = {},
+    onUpdateIntakeCantAngle: (Float) -> Unit = {},
+    onTriggerSonicSoundSwapTranslate: () -> Unit = {},
+    onSelectSonicSoundSwapMode: (SonicSoundSwapMode) -> Unit = {},
+    onSelectOdmTargetAndSelfTeach: (OdmAlignmentTarget) -> Unit = {},
+    onSealAtlasOdmToCodex: () -> Unit = {},
+    onProtocolOWireEvent: (ProtocolOWireEvent) -> Unit = {},
+    onSealProtocolOToCodex: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -120,6 +140,34 @@ fun TunnelHudDeck(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        // 000-0. PROTOCOL O: INTEGRITY CORE 2026 // SEALED IIFE (_gate • _cert • _engine.audius/.smart • _util • _wire)
+        ProtocolOIntegrityCoreCard(
+            state = state,
+            onWireEvent = onProtocolOWireEvent,
+            onSealProtocolOToCodex = onSealProtocolOToCodex,
+            onCopyToast = onCopyToast
+        )
+
+        // 000-A. OPEN INTAKE CANT O-RING // SEE IF NOT RGB OR FRQ KNOWABLE • <or if lie> • SONIC "TRANSLATE" • GOOD STACK
+        AtlasKnowabilityCenterSpineCard(
+            state = state,
+            onToggleRgbKnowable = onToggleRgbKnowable,
+            onToggleFrqKnowable = onToggleFrqKnowable,
+            onToggleAtlasLostPath = onToggleAtlasLostPath,
+            onReanchorAtlasAndRestoreKnowability = onReanchorAtlasAndRestoreKnowability,
+            onSelectCenterFileLine = onSelectCenterFileLine,
+            onToggleOdmGateStatus = onToggleOdmGateStatus,
+            onExecuteOdmAllowlistCommand = onExecuteOdmAllowlistCommand,
+            onToggleOrIfLie = onToggleOrIfLie,
+            onSelectIntakeJumpMode = onSelectIntakeJumpMode,
+            onUpdateIntakeCantAngle = onUpdateIntakeCantAngle,
+            onTriggerSonicSoundSwapTranslate = onTriggerSonicSoundSwapTranslate,
+            onSelectSonicSoundSwapMode = onSelectSonicSoundSwapMode,
+            onSelectOdmTargetAndSelfTeach = onSelectOdmTargetAndSelfTeach,
+            onSealAtlasOdmToCodex = onSealAtlasOdmToCodex,
+            onCopyToast = onCopyToast
+        )
+
         // 000-L. LOCAL ONLY PATHS INTERCONNECT // SERVERLESS INFRA DEPLOY (check:pass:true_only)
         LocalOnlyPathsInterconnectCard(
             state = state,

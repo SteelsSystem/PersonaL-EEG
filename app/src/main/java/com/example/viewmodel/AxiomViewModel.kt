@@ -30,18 +30,23 @@ import com.example.sensor.HardwareTelemetry
 import com.example.service.AsCoreRgbBiometricFrame
 import com.example.service.AsCoreRgbBiometricStreamService
 import com.example.service.AsCoreStreamProfile
+import com.example.service.AtlasKnowabilityAndOdmEngine
+import com.example.service.AtlasKnowabilityAndOdmState
 import com.example.service.DefaultAsCoreRgbBiometricStreamService
-import com.example.service.DeployTargetDeviceMode
 import com.example.service.DeployTierMode
-import com.example.service.EnvComparisonCategoryFilter
+import com.example.service.EmergencyReloadRepositoryService
 import com.example.service.GlobalVsPersonalDeployEngine
+import com.example.service.IntakeCantJumpMode
 import com.example.service.LocalOnlyPathsInterconnectEngine
-import com.example.service.MetallurgiaSteelAlloyPreset
-import com.example.service.ModularStackAndLicensingEngine
-import com.example.service.ModularStackLicensingState
-import com.example.service.ModularityBlockSpec
+import com.example.service.OdmAlignmentTarget
+import com.example.service.ProtocolOEngineProvider
+import com.example.service.ProtocolOFunctionId
+import com.example.service.ProtocolOIntegrityCoreEngine
+import com.example.service.ProtocolOIntegrityCoreState
+import com.example.service.ProtocolOWireEvent
 import com.example.service.RgbChannelAxis
 import com.example.service.ServerlessLocalDeployState
+import com.example.service.SonicSoundSwapMode
 import com.example.service.SpectRoomSensorDashboardState
 import com.example.service.SpectRoomSensorPathEngine
 import com.example.service.UnifiedDeployWhitepaperState
@@ -56,13 +61,12 @@ import com.example.ui.components.ScreenFilterAntMode
 import com.example.ui.components.createProceduralAntLatticeSeedBitmap
 import com.example.ui.components.editLocalAntFilterBitmap
 import com.example.ui.components.synthesizeLocalAntFilterBitmap
-import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.ai.ai
-import com.google.firebase.ai.type.ImagePart
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.type.PublicPreviewAPI
-import com.google.firebase.ai.type.QuotaExceededException
 import com.google.firebase.ai.type.ResponseModality
+import com.google.firebase.ai.type.asImageOrNull
 import com.google.firebase.ai.type.content
 import com.google.firebase.ai.type.generationConfig
 import java.security.MessageDigest
@@ -73,9 +77,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,9 +87,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
-
-private const val TAG = "AxiomViewModel"
 
 data class AxiomUiState(
     val activeTab: HudTab = HudTab.TUNNEL,
@@ -243,7 +242,6 @@ data class AxiomUiState(
     val micaDWaveDelta: Float = 0.14f,
     val micaDWaveSafeSealed: Boolean = true,
     val unifiedDeployWhitepaperState: UnifiedDeployWhitepaperState = GlobalVsPersonalDeployEngine.evaluateUnifiedState(),
-    val modularStackLicensingState: ModularStackLicensingState = ModularStackAndLicensingEngine.buildInitialState(),
 
     // As-If Screen Share // Search Best Work
     val screenShareSearchQuery: String = "",
@@ -272,8 +270,36 @@ data class AxiomUiState(
     val spectInvertedMode: Boolean = true,
     val spectSensorDashboardState: SpectRoomSensorDashboardState = SpectRoomSensorPathEngine.buildInitialDashboardState(),
 
-    // Modals, Screens & Toasts
-    val showBlockMindDashboard: Boolean = false,
+    // RGB/FRQ Knowability, As Atlas (RED) Lost-Path Wayfinder, Center File-Line Spine & ODM Stack Topology
+    val atlasKnowabilityState: AtlasKnowabilityAndOdmState = AtlasKnowabilityAndOdmEngine.evaluateState(
+        previous = AtlasKnowabilityAndOdmState(),
+        asCoreFrame = AsCoreRgbBiometricFrame(),
+        asCoreStreamActive = true,
+        eegBands = EegBandState(),
+        dominantHz = 18.2f,
+        rotatingFrqHz = 0.65f,
+        phaseCoherencePct = 92,
+        perturbation = 0.0f,
+        glslGateTrue = true,
+        redlineThreatActive = false,
+        localInterconnectState = LocalOnlyPathsInterconnectEngine.evaluateDeployGate(
+            nodes = LocalOnlyPathsInterconnectEngine.buildDefaultNodes(),
+            forwardParse = com.example.model.ForwardTunnelParseResult(),
+            asCoreToken = "as[core::focus_b#0]",
+            continuitySha256 = "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4",
+            sha256Verified = true,
+            roomAuditVerified = true,
+            deployEpoch = 1,
+            roomAuditRecordCount = 2
+        ),
+        spectSensorHealthPct = 98,
+        simTimeSec = 0.0f
+    ),
+
+    // Protocol O: Integrity Core 2026 (Sealed Sublayers: _gate, _cert, _engine, _util, _locale, _fn, _wire)
+    val protocolOState: ProtocolOIntegrityCoreState = ProtocolOIntegrityCoreEngine.buildInitialState(),
+
+    // Modals & Toasts
     val showGlslModal: Boolean = false,
     val showEmbeddedHtmlProfilerModal: Boolean = false,
     val toastMessage: String? = null,
@@ -590,6 +616,28 @@ class AxiomViewModel(
             persistedRecordCount = spectRoomRecords.value.size.coerceAtLeast(2)
         )
 
+        val nextAtlasKnowability = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = s.atlasKnowabilityState,
+            asCoreFrame = activeAsCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = bands,
+            dominantHz = dominantHz,
+            rotatingFrqHz = effectiveRotHz,
+            phaseCoherencePct = phaseCoherence,
+            perturbation = nextPerturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = isRedline,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = nextSensorDashboard.aggregateHealthPct,
+            simTimeSec = nextSimTime
+        )
+
+        val finalEffectiveTint = if (nextAtlasKnowability.asAtlasRedActive) {
+            floatArrayOf(1.52f, 0.18f, 0.24f)
+        } else {
+            effectiveTint
+        }
+
         _uiState.update {
             it.copy(
                 simTime = nextSimTime,
@@ -612,7 +660,7 @@ class AxiomViewModel(
                 cognitiveLoadPct = rawCogLoad,
                 biometricLoadIntensity = bioIntensity,
                 redlineThreatActive = isRedline,
-                effectiveRgbTint = effectiveTint,
+                effectiveRgbTint = finalEffectiveTint,
                 frameTimeHistory = updatedFrameHist,
                 integrityHistory = updatedIntegrityHist,
                 eegWaveHistory = updatedEegHist,
@@ -627,7 +675,8 @@ class AxiomViewModel(
                 failloadRiskPct = overallFailloadRisk,
                 blockMindMiscalculusDelta = if (it.blockMindSealedHasTrue && isSafeNow) 0.0f else miscalculusDelta,
                 blockMindSafetyVerified = isSafeNow,
-                spectSensorDashboardState = nextSensorDashboard
+                spectSensorDashboardState = nextSensorDashboard,
+                atlasKnowabilityState = nextAtlasKnowability
             )
         }
 
@@ -2736,6 +2785,1015 @@ class AxiomViewModel(
     }
 
     // =========================================================================
+    // RGB & FRQ KNOWABILITY, AS ATLAS (RED) LOST-PATH & CENTER FILE-LINE SPINE
+    // =========================================================================
+
+    fun toggleRgbKnowable() {
+        val s = _uiState.value
+        val nextForceUnknowable = !s.atlasKnowabilityState.forceRgbUnknowable
+        val updatedSeed = s.atlasKnowabilityState.copy(
+            forceRgbUnknowable = nextForceUnknowable,
+            selectedFileLineCode = "L2-KNOW"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = updatedSeed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        val tint = if (evaluated.asAtlasRedActive) floatArrayOf(1.52f, 0.18f, 0.24f) else s.asCoreFrame.rgbSynchroVector
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = tint
+            )
+        }
+        val msg = if (evaluated.rgbKnowable) {
+            "RGB Knowability Restored: RGB KNOWABLE [LOCKED]"
+        } else {
+            "RGB NOT KNOWABLE -> AS ATLAS (RED) Chromatic Wayfinder Active!"
+        }
+        appendLog("ATLAS-RGB", msg, if (evaluated.rgbKnowable) LogSeverity.NOMINAL else LogSeverity.WARNING)
+        showToast(msg)
+    }
+
+    fun toggleFrqKnowable() {
+        val s = _uiState.value
+        val nextForceUnknowable = !s.atlasKnowabilityState.forceFrqUnknowable
+        val updatedSeed = s.atlasKnowabilityState.copy(
+            forceFrqUnknowable = nextForceUnknowable,
+            selectedFileLineCode = "L2-KNOW"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = updatedSeed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        val tint = if (evaluated.asAtlasRedActive) floatArrayOf(1.52f, 0.18f, 0.24f) else s.asCoreFrame.rgbSynchroVector
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = tint
+            )
+        }
+        val msg = if (evaluated.frqKnowable) {
+            "FRQ Knowability Restored: 7-Band POT-FFT & EEG Hz LOCKED"
+        } else {
+            "FRQ NOT KNOWABLE -> AS ATLAS (RED) Frequency Wayfinder Active!"
+        }
+        appendLog("ATLAS-FRQ", msg, if (evaluated.frqKnowable) LogSeverity.NOMINAL else LogSeverity.WARNING)
+        showToast(msg)
+    }
+
+    fun toggleAtlasLostPath() {
+        val s = _uiState.value
+        val nextLost = !s.atlasKnowabilityState.forceAtlasLostPath
+        val updatedSeed = s.atlasKnowabilityState.copy(
+            forceAtlasLostPath = nextLost,
+            selectedFileLineCode = "L4-ATLAS"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = updatedSeed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        val tint = if (evaluated.asAtlasRedActive) floatArrayOf(1.52f, 0.18f, 0.24f) else s.asCoreFrame.rgbSynchroVector
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = tint
+            )
+        }
+        val msg = if (evaluated.onLostPath) {
+            "AS ATLAS (RED) // ON LOST PATH Engaged on Center File-Line Spine"
+        } else {
+            "Atlas (RED) Cleared — Path Re-Anchored to 1+ /Own/Dev/Logic_States"
+        }
+        appendLog("ATLAS-RED", msg, if (evaluated.onLostPath) LogSeverity.WARNING else LogSeverity.NOMINAL)
+        showToast(msg)
+    }
+
+    fun reanchorAtlasAndRestoreKnowability() {
+        val s = _uiState.value
+        val nextRecov = s.atlasKnowabilityState.atlasRecoveryCount + 1
+        val restoredInterconnect = LocalOnlyPathsInterconnectEngine.evaluateDeployGate(
+            nodes = LocalOnlyPathsInterconnectEngine.buildDefaultNodes(s.forwardTunnelParse, s.continuityCurrentSha256),
+            forwardParse = s.forwardTunnelParse.copy(onlyLocalLogicFlag = true, bracketDepthBalanced = true),
+            asCoreToken = s.asCoreFrame.asCoreToken,
+            continuitySha256 = s.continuityCurrentSha256,
+            sha256Verified = true,
+            roomAuditVerified = true,
+            deployEpoch = s.localInterconnectState.deployEpoch + 1,
+            roomAuditRecordCount = s.localInterconnectState.roomAuditRecordCount + 1,
+            activeNodeId = "DEST-1"
+        )
+        val (cmdOut, exitCode, blockedFlag) = AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand(
+            cmdName = s.atlasKnowabilityState.selectedAllowlistCmd,
+            gateStatusOn = true
+        )
+        val resetSeed = s.atlasKnowabilityState.copy(
+            forceRgbUnknowable = false,
+            forceFrqUnknowable = false,
+            forceAtlasLostPath = false,
+            forceOrIfLieDetected = false,
+            odmGateStatusOn = true,
+            lastCommandOutputJson = cmdOut,
+            lastCommandExitCode = exitCode,
+            runBlockedFlag = blockedFlag,
+            atlasRecoveryCount = nextRecov,
+            selfTeachLessonsCount = s.atlasKnowabilityState.selfTeachLessonsCount + 1,
+            selectedFileLineCode = "L2-KNOW"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = resetSeed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz.coerceAtLeast(16.8f),
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz.coerceAtLeast(0.65f),
+            phaseCoherencePct = s.phaseCoherencePct.coerceAtLeast(94),
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = restoredInterconnect,
+            spectSensorHealthPct = 99,
+            simTimeSec = s.simTime
+        )
+        _uiState.update {
+            it.copy(
+                asCoreStreamActive = true,
+                mockStreamEnabled = true,
+                perturbation = 0.0f,
+                healWave = 0.04f,
+                glslGateTrue = true,
+                redlineThreatActive = false,
+                effectiveUnicriticDrift = 0.0f,
+                phaseCoherencePct = it.phaseCoherencePct.coerceAtLeast(94),
+                localInterconnectState = restoredInterconnect,
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = s.asCoreFrame.rgbSynchroVector
+            )
+        }
+        val entry = AtlasKnowabilityAndOdmEngine.buildAtlasOdmCodexEntry(evaluated)
+        cleanAndComputeSha256(
+            raw = entry.codeSnippet,
+            title = "ATLAS (RED) RE-ANCHOR #$nextRecov // GOOD STACK SELF-TAUGHT",
+            crateTag = entry.categoryTag,
+            persistToRoom = true
+        )
+        appendLog(
+            "ATLAS-ANCHOR",
+            "Re-anchored Lost Path (#$nextRecov): RGB=KNOWABLE, FRQ=KNOWABLE, <or if lie>=FALSE, Good Stack=${evaluated.goodStackScorePct}%.",
+            LogSeverity.NOMINAL
+        )
+        showToast("Re-Anchored Path -> Good Stack [${evaluated.goodStackScorePct}%] & Self-Taught!")
+    }
+
+    fun toggleOrIfLieDetector() {
+        val s = _uiState.value
+        val nextLie = !s.atlasKnowabilityState.forceOrIfLieDetected
+        val seed = s.atlasKnowabilityState.copy(
+            forceOrIfLieDetected = nextLie,
+            selectedFileLineCode = "L1-PATH"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        val tint = if (evaluated.asAtlasRedActive) floatArrayOf(1.52f, 0.18f, 0.24f) else s.asCoreFrame.rgbSynchroVector
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = tint
+            )
+        }
+        val msg = if (evaluated.orIfLieDetected) {
+            "<or if lie>: LIE DETECTED -> AS ATLAS (RED) Engaged on Open Intake Cant O-Ring!"
+        } else {
+            "<or if lie>: FALSE -> Open Intake Cant O-Ring Sealed & Clean"
+        }
+        appendLog("OR-IF-LIE", msg, if (evaluated.orIfLieDetected) LogSeverity.WARNING else LogSeverity.NOMINAL)
+        showToast(msg)
+    }
+
+    fun selectIntakeCantJumpMode(mode: IntakeCantJumpMode) {
+        val s = _uiState.value
+        val seed = s.atlasKnowabilityState.copy(
+            intakeCantJumpMode = mode,
+            selectedFileLineCode = "L4-ATLAS"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = evaluated) }
+        appendLog("CANT-JUMP", "Intake Cant O-Ring Jump Mode -> ${mode.label} (${"%.2f".format(evaluated.effectiveJumpZoomFactor)}x)", LogSeverity.INFO)
+        showToast("O-Ring Jump Mode: ${mode.label}")
+    }
+
+    fun cycleIntakeCantJumpMode() {
+        val modes = IntakeCantJumpMode.entries
+        val cur = _uiState.value.atlasKnowabilityState.intakeCantJumpMode
+        val next = modes[(modes.indexOf(cur) + 1) % modes.size]
+        selectIntakeCantJumpMode(next)
+    }
+
+    fun updateIntakeCantAngleDeg(angleDeg: Float) {
+        val s = _uiState.value
+        val clamped = angleDeg.coerceIn(0f, 55f)
+        val seed = s.atlasKnowabilityState.copy(
+            intakeCantAngleDeg = clamped,
+            selectedFileLineCode = "L4-ATLAS"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = evaluated) }
+        showToast("Intake Cant O-Ring Angle: ${"%.1f".format(clamped)}°")
+    }
+
+    fun triggerSonicSoundSwapTranslate() {
+        val s = _uiState.value
+        val cur = s.atlasKnowabilityState
+        val modes = SonicSoundSwapMode.entries
+        val nextMode = modes[(modes.indexOf(cur.sonicSoundSwapMode) + 1) % modes.size]
+        val nextCount = cur.sonicSoundSwapCount + 1
+        val nextOffset = (cur.sonicSwapPhaseOffset + 1) % 7
+        val nextLessons = if (cur.isGoodStack) cur.selfTeachLessonsCount + 1 else cur.selfTeachLessonsCount
+        val seed = cur.copy(
+            sonicSoundSwapTranslateActive = true,
+            sonicSoundSwapMode = nextMode,
+            sonicSoundSwapCount = nextCount,
+            sonicSwapPhaseOffset = nextOffset,
+            sonicSwapWaveBurst = 1.38f,
+            selfTeachLessonsCount = nextLessons,
+            selectedFileLineCode = "L2-KNOW"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                healWave = 0.04f
+            )
+        }
+        appendLog(
+            "SONIC-TRANSLATE",
+            "Sonic Sound Swap \"translate\" #$nextCount -> ${nextMode.title} (Self-Taught #$nextLessons).",
+            LogSeverity.NOMINAL
+        )
+        showToast("Sonic Sound Swap \"translate\" #$nextCount: ${nextMode.title}")
+    }
+
+    fun selectSonicSoundSwapMode(mode: SonicSoundSwapMode) {
+        val s = _uiState.value
+        val cur = s.atlasKnowabilityState
+        val nextCount = cur.sonicSoundSwapCount + 1
+        val seed = cur.copy(
+            sonicSoundSwapTranslateActive = true,
+            sonicSoundSwapMode = mode,
+            sonicSoundSwapCount = nextCount,
+            sonicSwapPhaseOffset = (cur.sonicSwapPhaseOffset + 2) % 7,
+            sonicSwapWaveBurst = 1.32f
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = evaluated, healWave = 0.04f) }
+        showToast("Sonic \"translate\" Mode: ${mode.title}")
+    }
+
+    fun selectOdmTargetAndSelfTeach(target: OdmAlignmentTarget) {
+        val s = _uiState.value
+        val cur = s.atlasKnowabilityState
+        val nextLessons = cur.selfTeachLessonsCount + 1
+        val seed = cur.copy(
+            selectedOdmTarget = target,
+            selfTeachLessonsCount = nextLessons
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = evaluated) }
+        appendLog("SELF-TEACH", "Good-Stack Autodidact (#$nextLessons): ${target.selfTeachInsight}", LogSeverity.NOMINAL)
+        showToast("Self-Taught [${target.badge}]: ${target.title}")
+    }
+
+    fun selectCenterFileLine(lineCode: String) {
+        val s = _uiState.value
+        val updated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = s.atlasKnowabilityState.copy(selectedFileLineCode = lineCode),
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = updated) }
+    }
+
+    fun toggleOdmGateStatus() {
+        val s = _uiState.value
+        val nextGateOn = !s.atlasKnowabilityState.odmGateStatusOn
+        val (outJson, exitCode, runBlocked) = AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand(
+            cmdName = s.atlasKnowabilityState.selectedAllowlistCmd,
+            gateStatusOn = nextGateOn
+        )
+        val seed = s.atlasKnowabilityState.copy(
+            odmGateStatusOn = nextGateOn,
+            lastCommandOutputJson = outJson,
+            lastCommandExitCode = exitCode,
+            runBlockedFlag = runBlocked,
+            selectedFileLineCode = "L0-PROBE"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        val tint = if (evaluated.asAtlasRedActive) floatArrayOf(1.52f, 0.18f, 0.24f) else s.asCoreFrame.rgbSynchroVector
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = evaluated,
+                effectiveRgbTint = tint
+            )
+        }
+        val msg = if (nextGateOn) {
+            "ODM Gate STATUS=ON • Allowlist Probe Armed"
+        } else {
+            "ODM Gate STATUS=OFF • RUN_BLOCKED=1 (Exit 3) -> AS ATLAS (RED)"
+        }
+        appendLog("ODM-GATE", msg, if (nextGateOn) LogSeverity.NOMINAL else LogSeverity.WARNING)
+        showToast(msg)
+    }
+
+    fun executeOdmAllowlistCommand(cmdName: String) {
+        val s = _uiState.value
+        val (outJson, exitCode, runBlocked) = AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand(
+            cmdName = cmdName,
+            gateStatusOn = s.atlasKnowabilityState.odmGateStatusOn
+        )
+        val seed = s.atlasKnowabilityState.copy(
+            selectedAllowlistCmd = cmdName,
+            lastCommandOutputJson = outJson,
+            lastCommandExitCode = exitCode,
+            runBlockedFlag = runBlocked,
+            selectedFileLineCode = "L0-PROBE"
+        )
+        val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = seed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = s.asCoreStreamActive,
+            eegBands = s.eegBands,
+            dominantHz = s.dominantFrequencyHz,
+            rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+            phaseCoherencePct = s.phaseCoherencePct,
+            perturbation = s.perturbation,
+            glslGateTrue = s.glslGateTrue,
+            redlineThreatActive = s.redlineThreatActive,
+            localInterconnectState = s.localInterconnectState,
+            spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+            simTimeSec = s.simTime
+        )
+        _uiState.update { it.copy(atlasKnowabilityState = evaluated) }
+        appendLog("ODM-CMD", "run_cmd.sh $cmdName -> exit=$exitCode (RUN_BLOCKED=$runBlocked)", if (exitCode == 0) LogSeverity.INFO else LogSeverity.WARNING)
+        showToast("ODM run_cmd.sh $cmdName -> exit=$exitCode")
+    }
+
+    fun sealAtlasOdmToCodex() {
+        val s = _uiState.value
+        val entry = AtlasKnowabilityAndOdmEngine.buildAtlasOdmCodexEntry(s.atlasKnowabilityState)
+        cleanAndComputeSha256(
+            raw = entry.codeSnippet,
+            title = entry.crateName,
+            crateTag = entry.categoryTag,
+            persistToRoom = true
+        )
+        showToast("Sealed Atlas (RED) Knowability & ODM Stack into SHA-256 Verifier")
+    }
+
+    // =========================================================================
+    // PROTOCOL O: INTEGRITY CORE 2026 // SEALED SUBLAYER WIRE (_wire)
+    // =========================================================================
+
+    fun dispatchProtocolOWireEvent(event: ProtocolOWireEvent) {
+        val s = _uiState.value
+        val curProto = s.protocolOState
+        when (event) {
+            is ProtocolOWireEvent.OpenSublayerGate -> {
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            gateModalOpen = true,
+                            orbKeyActive = ProtocolOIntegrityCoreEngine.isOrbKeyActive()
+                        )
+                    )
+                }
+            }
+
+            is ProtocolOWireEvent.CloseSublayerGate -> {
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            gateModalOpen = false,
+                            orbKeyActive = ProtocolOIntegrityCoreEngine.isOrbKeyActive()
+                        )
+                    )
+                }
+            }
+
+            is ProtocolOWireEvent.CommitVolatileGateKey -> {
+                val active = ProtocolOIntegrityCoreEngine.commitVolatileKey(event.rawPasswordInput)
+                val nextProvider = if (active) {
+                    ProtocolOEngineProvider.GEMINI_O_GATE
+                } else {
+                    ProtocolOEngineProvider.POLLINATIONS_FREE
+                }
+                val feedback = if (active) {
+                    "◈ O-Gate Key Committed to Volatile Memory (let _key) • Zero Persistence • Orb GREEN"
+                } else {
+                    "◈ Empty Input -> O-Gate Cleared • Orb RED (Zero Key)"
+                }
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            gateModalOpen = false,
+                            orbKeyActive = active,
+                            activeProvider = nextProvider,
+                            gateFeedbackMessage = feedback
+                        )
+                    )
+                }
+                appendLog("PROTOCOL-O", feedback, LogSeverity.NOMINAL)
+                showToast(if (active) "◈ Volatile O-Gate Key Active (Memory Only)" else "◈ O-Gate Key Cleared")
+            }
+
+            is ProtocolOWireEvent.PurgeVolatileGateKey -> {
+                ProtocolOIntegrityCoreEngine.purgeVolatileKey()
+                val nextPurges = curProto.keyPurgeCount + 1
+                val feedback = "◈ _key Wiped Immediately from Volatile Memory (Purge #$nextPurges) • Orb RED"
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            gateModalOpen = false,
+                            orbKeyActive = false,
+                            activeProvider = ProtocolOEngineProvider.POLLINATIONS_FREE,
+                            gateFeedbackMessage = feedback,
+                            keyPurgeCount = nextPurges
+                        )
+                    )
+                }
+                appendLog("PROTOCOL-O", feedback, LogSeverity.INFO)
+                showToast("◈ Volatile _key Purged from Memory")
+            }
+
+            is ProtocolOWireEvent.SelectSublayerFunction -> {
+                _uiState.update {
+                    it.copy(protocolOState = curProto.copy(activeFunction = event.fn))
+                }
+                executeProtocolOSublayerInternal(fn = event.fn)
+            }
+
+            is ProtocolOWireEvent.UpdateQueryInput -> {
+                _uiState.update {
+                    it.copy(protocolOState = curProto.copy(queryInput = event.query))
+                }
+            }
+
+            is ProtocolOWireEvent.SelectNetworkProbePreset -> {
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            selectedProbePreset = event.preset,
+                            activeFunction = ProtocolOFunctionId.NETWORK_PROBE,
+                            activeProvider = event.preset.provider
+                        )
+                    )
+                }
+                executeProtocolOSublayerInternal(
+                    fn = ProtocolOFunctionId.NETWORK_PROBE,
+                    presetOverride = event.preset
+                )
+            }
+
+            is ProtocolOWireEvent.SelectLocale -> {
+                _uiState.update {
+                    it.copy(protocolOState = curProto.copy(activeLocale = event.localeCode))
+                }
+                executeProtocolOSublayerInternal(localeOverride = event.localeCode)
+            }
+
+            is ProtocolOWireEvent.ExecuteActiveSublayerFunction -> {
+                executeProtocolOSublayerInternal()
+            }
+
+            is ProtocolOWireEvent.ExecuteAudiusKeylessRecon -> {
+                val (json, track) = ProtocolOIntegrityCoreEngine.executeAudiusKeyless(
+                    query = event.query,
+                    preset = curProto.selectedProbePreset,
+                    allowNetworkEgress = false,
+                    simTimeSec = s.simTime
+                )
+                val tree = ProtocolOIntegrityCoreEngine.extractStructure(json)
+                val shortH = ProtocolOIntegrityCoreEngine.shortHash(json)
+
+                // Interconnect Audius 7-band sonic energy directly into Sonic Sound Swap "translate" & Open Cant O-Ring!
+                val curAtlas = s.atlasKnowabilityState
+                val nextSwapCount = curAtlas.sonicSoundSwapCount + 1
+                val updatedAtlas = curAtlas.copy(
+                    sonicSoundSwapTranslateActive = true,
+                    sonicSoundSwapCount = nextSwapCount,
+                    sonicSwapPhaseOffset = (curAtlas.sonicSwapPhaseOffset + 1) % 7,
+                    sonicSwapWaveBurst = 1.34f,
+                    sevenBandFft = track.sevenBandDrive,
+                    sonicTranslateStatusLabel = "AUDIUS KEYLESS ⇄ SONIC \"translate\" #$nextSwapCount // ${track.title} (${track.bpm} BPM)"
+                )
+                _uiState.update {
+                    it.copy(
+                        atlasKnowabilityState = updatedAtlas,
+                        healWave = 0.04f,
+                        protocolOState = curProto.copy(
+                            activeProvider = ProtocolOEngineProvider.AUDIUS_KEYLESS,
+                            audiusLastTrack = track,
+                            extractedKeyTree = tree,
+                            rawJsonOutput = json,
+                            lastShortHash = shortH,
+                            functionOutputSummary = "[_engine.audius • KEYLESS] '${track.title}' (${track.bpm} BPM) -> Coupled to 7-Band Sonic \"translate\" O-Ring (#$nextSwapCount)."
+                        )
+                    )
+                }
+                appendLog(
+                    "AUDIUS-RECON",
+                    "_engine.audius('${event.query}') -> ${track.title} (${track.bpm} BPM) coupled to Sonic \"translate\"",
+                    LogSeverity.NOMINAL
+                )
+                showToast("🎵 Audius Keyless: ${track.title} (${track.bpm} BPM)")
+            }
+
+            is ProtocolOWireEvent.GenerateVolatileCertificate -> {
+                val cert = ProtocolOIntegrityCoreEngine.generateVolatileCertificate(
+                    state = curProto,
+                    atlas = s.atlasKnowabilityState,
+                    continuitySha256 = s.continuityCurrentSha256
+                )
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            volatileCertificate = cert,
+                            lastShortHash = cert.shortHash
+                        )
+                    )
+                }
+                appendLog("CERT-SUBLAYER", "Generated volatile certificate ${cert.certId} (${cert.engineBadge})", LogSeverity.NOMINAL)
+            }
+
+            is ProtocolOWireEvent.DismissVolatileCertificate -> {
+                // Volatile _certData is wiped (null-ed) immediately on dismiss!
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            volatileCertificate = null,
+                            blobDownloadStatus = "Volatile _certData wiped on dismiss"
+                        )
+                    )
+                }
+            }
+
+            is ProtocolOWireEvent.DownloadVolatileCertificateBlob -> {
+                _uiState.update {
+                    it.copy(
+                        protocolOState = curProto.copy(
+                            blobDownloadStatus = "Blob URL Created -> Auto-Revoke Armed (5s)"
+                        )
+                    )
+                }
+            }
+
+            is ProtocolOWireEvent.TriggerPredefinedDeterministicSelfUpdateSync -> {
+                triggerPredefinedDeterministicSelfUpdateSync()
+            }
+
+            is ProtocolOWireEvent.TriggerEmergencySelfDependencyReload -> {
+                triggerEmergencySelfDependencyReload(
+                    signalLossTriggered = false,
+                    reason = "ONE_TAP_EMERGENCY_SELF_DEPENDENCY_RELOAD"
+                )
+            }
+
+            is ProtocolOWireEvent.SimulateSignalLossAndAutoReload -> {
+                val armed = curProto.emergencyReloadPack.autoReloadArmed
+                if (armed) {
+                    triggerEmergencySelfDependencyReload(
+                        signalLossTriggered = true,
+                        reason = "SIGNAL_LOSS_AUTO_INTERCEPT_MERKLE_6HOP_RELOAD"
+                    )
+                } else {
+                    // If auto-reload is disarmed, drop into AS ATLAS (RED) signal-loss alert awaiting manual one-tap reload
+                    val lostSeed = s.atlasKnowabilityState.copy(
+                        forceAtlasLostPath = true,
+                        selectedFileLineCode = "L4-ATLAS"
+                    )
+                    val evaluated = AtlasKnowabilityAndOdmEngine.evaluateState(
+                        previous = lostSeed,
+                        asCoreFrame = s.asCoreFrame,
+                        asCoreStreamActive = s.asCoreStreamActive,
+                        eegBands = s.eegBands,
+                        dominantHz = s.dominantFrequencyHz,
+                        rotatingFrqHz = s.effectiveRotatingFrequencyHz,
+                        phaseCoherencePct = s.phaseCoherencePct,
+                        perturbation = s.perturbation,
+                        glslGateTrue = s.glslGateTrue,
+                        redlineThreatActive = s.redlineThreatActive,
+                        localInterconnectState = s.localInterconnectState,
+                        spectSensorHealthPct = s.spectSensorDashboardState.aggregateHealthPct,
+                        simTimeSec = s.simTime
+                    )
+                    val alertPack = curProto.emergencyReloadPack.copy(
+                        signalLossDetected = true,
+                        lastReloadTriggerReason = "SIGNAL_LOSS_DETECTED_AWAITING_ONE_TAP_RELOAD",
+                        statusBanner = "SIGNAL LOSS DETECTED [AUTO-RELOAD DISARMED] -> Tap 'Emergency Slice & Reload' to restore 6-Hop Merkle-Mesh!"
+                    )
+                    _uiState.update {
+                        it.copy(
+                            atlasKnowabilityState = evaluated,
+                            effectiveRgbTint = floatArrayOf(1.52f, 0.18f, 0.24f),
+                            protocolOState = curProto.copy(emergencyReloadPack = alertPack)
+                        )
+                    }
+                    appendLog("EMERG-SIGNAL", "Signal loss detected while Auto-Reload disarmed -> AS ATLAS (RED) engaged.", LogSeverity.WARNING)
+                    showToast("⚠️ Signal Loss Detected! Tap Emergency Reload to restore 6-Hop Mesh")
+                }
+            }
+
+            is ProtocolOWireEvent.ToggleEmergencyAutoReloadArmed -> {
+                val nextArmed = !curProto.emergencyReloadPack.autoReloadArmed
+                val updatedPack = curProto.emergencyReloadPack.copy(
+                    autoReloadArmed = nextArmed,
+                    statusBanner = if (nextArmed) {
+                        "AUTO SIGNAL-LOSS WATCHDOG ARMED + ONE-TAP RELOAD READY • Merkle Root ${curProto.emergencyReloadPack.merkleMeshRootShortHash}"
+                    } else {
+                        "MANUAL ONE-TAP RELOAD MODE (Auto Watchdog Paused) • Merkle Root ${curProto.emergencyReloadPack.merkleMeshRootShortHash}"
+                    }
+                )
+                _uiState.update {
+                    it.copy(protocolOState = curProto.copy(emergencyReloadPack = updatedPack))
+                }
+                showToast(if (nextArmed) "🛡️ Auto Signal-Loss Reload Watchdog ARMED" else "🛡️ Switched to Manual One-Tap Emergency Reload")
+            }
+        }
+    }
+
+    /**
+     * Delegates to `EmergencyReloadRepositoryService` to slice, verify all 6 Bidirectional Merkle-Mesh
+     * SHA-256 joints across the 6-hop Relay Vector Ring, reload the stack locally, and persist the
+     * audit record to Room SQLite (`SpectRepository`).
+     */
+    fun triggerEmergencySelfDependencyReload(
+        signalLossTriggered: Boolean = false,
+        reason: String = "ONE_TAP_EMERGENCY_SELF_DEPENDENCY_RELOAD"
+    ) {
+        val s = _uiState.value
+        val bundle = EmergencyReloadRepositoryService.executeOneTapOrAutoReload(
+            currentProto = s.protocolOState,
+            currentAtlas = s.atlasKnowabilityState,
+            currentInterconnect = s.localInterconnectState,
+            forwardParse = s.forwardTunnelParse,
+            asCoreFrame = s.asCoreFrame,
+            eegBands = s.eegBands,
+            continuitySha256 = s.continuityCurrentSha256,
+            signalLossTriggered = signalLossTriggered,
+            triggerReason = reason
+        )
+        val pack = bundle.restoredProtocolO.emergencyReloadPack
+
+        _uiState.update {
+            it.copy(
+                asCoreStreamActive = true,
+                mockStreamEnabled = true,
+                perturbation = 0.0f,
+                healWave = 0.04f,
+                glslGateTrue = true,
+                redlineThreatActive = false,
+                effectiveUnicriticDrift = 0.0f,
+                phaseCoherencePct = 99,
+                localInterconnectState = bundle.restoredInterconnect,
+                atlasKnowabilityState = bundle.restoredAtlas,
+                protocolOState = bundle.restoredProtocolO,
+                effectiveRgbTint = s.asCoreFrame.rgbSynchroVector
+            )
+        }
+
+        viewModelScope.launch {
+            EmergencyReloadRepositoryService.persistEmergencyReloadAuditToRoom(
+                repository = repository,
+                bundle = bundle,
+                rgbModeTitle = s.rgbMode.title
+            )
+        }
+
+        cleanAndComputeSha256(
+            raw = bundle.codexScript,
+            title = bundle.auditTitle,
+            crateTag = "Protocol O // 6-Hop Merkle-Mesh Reload",
+            persistToRoom = false
+        )
+        appendLog(
+            "EMERG-RELOAD",
+            "${pack.statusBanner} [${bundle.detectionSnapshot.signalHealthMaskHex} • reason=$reason]",
+            LogSeverity.NOMINAL
+        )
+        showToast(
+            if (signalLossTriggered) {
+                "🚨 Signal Drop Intercepted -> Auto-Reloaded ${pack.packId} (${bundle.detectionSnapshot.signalHealthMaskHex})"
+            } else {
+                "🛡️ Emergency Self-Dependency Pack Reloaded [${pack.merkleMeshRootShortHash} • ${bundle.detectionSnapshot.signalHealthMaskHex}]"
+            }
+        )
+    }
+
+    /**
+     * Executes a full-stack Predefined Deterministic Self-Update, Upgrade & Sync pass across:
+     * 1. Local-Only Loopback Interconnect (6/6 paths, <or if lie> = FALSE)
+     * 2. ODM Guarded Kernel & 4 Architectural Upgrades (NO_CDN_DOM02, SSE_JSONL_PIPE, RUST_DSP_CONSOLIDATION, GOOD_STACK_AUTODIDACT)
+     * 3. RGB & 7-Band FRQ Knowability Lock + Open Intake Cant O-Ring (24.0°, JUMP_SYNC 1.00x)
+     * 4. Audius Keyless REST (_engine.audius) ⇄ Sonic Sound Swap "translate" (128 BPM)
+     * 5. Protocol O Sealed IIFE (v2026.04.12-DET-SYNC) + Deterministic Volatile Certificate
+     */
+    fun triggerPredefinedDeterministicSelfUpdateSync() {
+        val s = _uiState.value
+        val restoredInterconnect = LocalOnlyPathsInterconnectEngine.evaluateDeployGate(
+            nodes = LocalOnlyPathsInterconnectEngine.buildDefaultNodes(s.forwardTunnelParse, s.continuityCurrentSha256),
+            forwardParse = s.forwardTunnelParse.copy(onlyLocalLogicFlag = true, bracketDepthBalanced = true),
+            asCoreToken = s.asCoreFrame.asCoreToken,
+            continuitySha256 = s.continuityCurrentSha256,
+            sha256Verified = true,
+            roomAuditVerified = true,
+            deployEpoch = s.localInterconnectState.deployEpoch + 1,
+            roomAuditRecordCount = s.localInterconnectState.roomAuditRecordCount + 1,
+            activeNodeId = "DEST-1"
+        )
+        val (cmdOut, exitCode, blockedFlag) = AtlasKnowabilityAndOdmEngine.executeGuardedOdmCommand(
+            cmdName = "uname",
+            gateStatusOn = true
+        )
+        val deterministicAtlasSeed = s.atlasKnowabilityState.copy(
+            forceRgbUnknowable = false,
+            forceFrqUnknowable = false,
+            forceAtlasLostPath = false,
+            forceOrIfLieDetected = false,
+            odmGateStatusOn = true,
+            selectedAllowlistCmd = "uname",
+            lastCommandOutputJson = cmdOut,
+            lastCommandExitCode = exitCode,
+            runBlockedFlag = blockedFlag,
+            intakeCantAngleDeg = 24.0f,
+            intakeCantJumpMode = IntakeCantJumpMode.AUTO_JUMP_IN_OUT,
+            sonicSoundSwapTranslateActive = true,
+            sonicSoundSwapMode = SonicSoundSwapMode.PRISMATIC_SPECTRUM_SWAP,
+            sonicSoundSwapCount = s.atlasKnowabilityState.sonicSoundSwapCount + 1,
+            sonicSwapWaveBurst = 1.35f,
+            selectedOdmTarget = OdmAlignmentTarget.TARGET_C_RUST_DSP,
+            selfTeachLessonsCount = s.atlasKnowabilityState.selfTeachLessonsCount + 1,
+            atlasRecoveryCount = s.atlasKnowabilityState.atlasRecoveryCount + 1,
+            selectedFileLineCode = "L2-KNOW"
+        )
+        val syncedAtlas = AtlasKnowabilityAndOdmEngine.evaluateState(
+            previous = deterministicAtlasSeed,
+            asCoreFrame = s.asCoreFrame,
+            asCoreStreamActive = true,
+            eegBands = s.eegBands,
+            dominantHz = 16.8f,
+            rotatingFrqHz = 0.72f,
+            phaseCoherencePct = 98,
+            perturbation = 0.0f,
+            glslGateTrue = true,
+            redlineThreatActive = false,
+            localInterconnectState = restoredInterconnect,
+            spectSensorHealthPct = 99,
+            simTimeSec = 0.0f
+        )
+        val syncedProto = ProtocolOIntegrityCoreEngine.executePredefinedDeterministicSelfUpdateSync(
+            currentState = s.protocolOState,
+            atlas = syncedAtlas,
+            continuitySha256 = s.continuityCurrentSha256
+        )
+
+        _uiState.update {
+            it.copy(
+                asCoreStreamActive = true,
+                mockStreamEnabled = true,
+                perturbation = 0.0f,
+                healWave = 0.04f,
+                glslGateTrue = true,
+                redlineThreatActive = false,
+                effectiveUnicriticDrift = 0.0f,
+                phaseCoherencePct = 98,
+                localInterconnectState = restoredInterconnect,
+                atlasKnowabilityState = syncedAtlas,
+                protocolOState = syncedProto,
+                effectiveRgbTint = s.asCoreFrame.rgbSynchroVector
+            )
+        }
+
+        val entry = ProtocolOIntegrityCoreEngine.buildProtocolOCodexEntry(syncedProto)
+        cleanAndComputeSha256(
+            raw = entry.codeSnippet,
+            title = "PREDEFINED DETERMINISTIC SELF-UPDATE/UPGRADE/SYNC // ${syncedProto.deterministicVectorShortHash}",
+            crateTag = entry.categoryTag,
+            persistToRoom = true
+        )
+        appendLog(
+            "DET-SYNC",
+            "Predefined Deterministic Self-Update/Upgrade/Sync #${syncedProto.deterministicSyncRevision} (${syncedProto.deterministicVectorShortHash}) -> 6/6 Sublayers Locked.",
+            LogSeverity.NOMINAL
+        )
+        showToast("⚡ Deterministic Self-Update • Upgrade • Sync [${syncedProto.deterministicVectorShortHash}] Locked")
+    }
+
+    private fun executeProtocolOSublayerInternal(
+        fn: ProtocolOFunctionId? = null,
+        presetOverride: com.example.service.NetworkProbePreset? = null,
+        localeOverride: String? = null
+    ) {
+        val s = _uiState.value
+        val curProto = s.protocolOState
+        val targetFn = fn ?: curProto.activeFunction
+        val targetPreset = presetOverride ?: curProto.selectedProbePreset
+        val targetLocale = localeOverride ?: curProto.activeLocale
+
+        val (provider, json, audiusTrack) = ProtocolOIntegrityCoreEngine.executeSmartChokePoint(
+            fn = targetFn,
+            query = curProto.queryInput,
+            locale = targetLocale,
+            atlas = s.atlasKnowabilityState,
+            asCore = s.asCoreFrame,
+            eeg = s.eegBands,
+            preset = targetPreset
+        )
+        val tree = ProtocolOIntegrityCoreEngine.extractStructure(json)
+        val shortH = ProtocolOIntegrityCoreEngine.shortHash(json)
+
+        val updatedAtlas = if (audiusTrack != null) {
+            val nextSwap = s.atlasKnowabilityState.sonicSoundSwapCount + 1
+            s.atlasKnowabilityState.copy(
+                sonicSoundSwapTranslateActive = true,
+                sonicSoundSwapCount = nextSwap,
+                sevenBandFft = audiusTrack.sevenBandDrive,
+                sonicTranslateStatusLabel = "AUDIUS ⇄ SONIC \"translate\" #$nextSwap // ${audiusTrack.title}"
+            )
+        } else {
+            s.atlasKnowabilityState
+        }
+
+        _uiState.update {
+            it.copy(
+                atlasKnowabilityState = updatedAtlas,
+                protocolOState = curProto.copy(
+                    orbKeyActive = ProtocolOIntegrityCoreEngine.isOrbKeyActive(),
+                    activeProvider = provider,
+                    activeFunction = targetFn,
+                    selectedProbePreset = targetPreset,
+                    activeLocale = targetLocale,
+                    audiusLastTrack = audiusTrack ?: curProto.audiusLastTrack,
+                    extractedKeyTree = tree,
+                    rawJsonOutput = json,
+                    lastShortHash = shortH,
+                    functionOutputSummary = "[${provider.badge}] ${targetFn.title} (${targetLocale}) • shortHash=$shortH"
+                )
+            )
+        }
+    }
+
+    fun sealProtocolOToCodex() {
+        val s = _uiState.value
+        val entry = ProtocolOIntegrityCoreEngine.buildProtocolOCodexEntry(s.protocolOState)
+        cleanAndComputeSha256(
+            raw = entry.codeSnippet,
+            title = entry.crateName,
+            crateTag = entry.categoryTag,
+            persistToRoom = true
+        )
+        showToast("Protocol O: Integrity Core 2026 Sealed in SHA-256 Verifier")
+    }
+
+    // =========================================================================
     // AS-IF SCREEN SHARE // SEARCH BEST WORK SPOTLIGHT
     // =========================================================================
 
@@ -2879,16 +3937,6 @@ class AxiomViewModel(
     }
 
     @OptIn(PublicPreviewAPI::class)
-    private val screenFilterImageModel by lazy {
-        Firebase.ai.generativeModel(
-            modelName = "gemini-nano-banana-2.1",
-            generationConfig = generationConfig {
-                responseModalities = listOf(ResponseModality.IMAGE)
-            }
-        )
-    }
-
-    @OptIn(PublicPreviewAPI::class)
     fun generateScreenFilterAiImage() {
         val s = _uiState.value
         val promptText = s.screenFilterAiPrompt.trim().ifEmpty {
@@ -2909,12 +3957,18 @@ class AxiomViewModel(
 
         viewModelScope.launch {
             try {
-                val generatedBitmap = withTimeout(60_000L) {
-                    val response = screenFilterImageModel.generateContent(promptText)
-                    response.candidates.firstOrNull()
-                        ?.content?.parts?.filterIsInstance<ImagePart>()
-                        ?.firstOrNull()?.image
+                val model = Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(
+                    modelName = "gemini-3.1-flash-image-preview",
+                    generationConfig = generationConfig {
+                        responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
+                    }
+                )
+                val response = withContext(Dispatchers.IO) {
+                    model.generateContent(promptText)
                 }
+                val generatedBitmap = response.candidates
+                    .firstOrNull()?.content?.parts
+                    ?.firstNotNullOfOrNull { it.asImageOrNull() }
 
                 if (generatedBitmap != null) {
                     _uiState.update {
@@ -2928,39 +3982,13 @@ class AxiomViewModel(
                             )
                         )
                     }
-                    appendLog("ANT-AI", "Generated Screen Filter Ant visual via gemini-nano-banana-2.1.", LogSeverity.NOMINAL)
+                    appendLog("ANT-AI", "Generated Screen Filter Ant visual via Gemini 3.1 Flash Image.", LogSeverity.NOMINAL)
                     showToast("Screen Filter Ant Visual Generated")
                 } else {
-                    val msg = "No image was returned by the model."
-                    Log.e(TAG, msg)
-                    _uiState.update {
-                        it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                    }
-                    appendLog("ANT-AI", msg, LogSeverity.WARNING)
+                    handleAiFailloadFallback(promptText, activeMode, isEdit = false, baseBitmap = null)
                 }
-            } catch (e: TimeoutCancellationException) {
-                Log.e(TAG, "Image generation timed out", e)
-                val msg = "Image generation timed out after 60 seconds. Please try again."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
-            } catch (e: QuotaExceededException) {
-                Log.e(TAG, "Quota exceeded during image generation", e)
-                val msg = "Rate limit exceeded. Please try again later."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Image generation failed", e)
-                val msg = e.localizedMessage ?: "Image generation failed."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
+                handleAiFailloadFallback(promptText, activeMode, isEdit = false, baseBitmap = null, errorMsg = e.message)
             }
         }
     }
@@ -2991,17 +4019,22 @@ class AxiomViewModel(
 
         viewModelScope.launch {
             try {
-                val editedBitmap = withTimeout(60_000L) {
-                    val response = screenFilterImageModel.generateContent(
-                        content {
-                            image(baseBitmap)
-                            text(promptText)
-                        }
-                    )
-                    response.candidates.firstOrNull()
-                        ?.content?.parts?.filterIsInstance<ImagePart>()
-                        ?.firstOrNull()?.image
+                val model = Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(
+                    modelName = "gemini-3.1-flash-image-preview",
+                    generationConfig = generationConfig {
+                        responseModalities = listOf(ResponseModality.TEXT, ResponseModality.IMAGE)
+                    }
+                )
+                val inputContent = content {
+                    image(baseBitmap)
+                    text(promptText)
                 }
+                val response = withContext(Dispatchers.IO) {
+                    model.generateContent(inputContent)
+                }
+                val editedBitmap = response.candidates
+                    .firstOrNull()?.content?.parts
+                    ?.firstNotNullOfOrNull { it.asImageOrNull() }
 
                 if (editedBitmap != null) {
                     _uiState.update {
@@ -3015,39 +4048,13 @@ class AxiomViewModel(
                             )
                         )
                     }
-                    appendLog("ANT-AI", "Edited Screen Filter Ant visual via gemini-nano-banana-2.1.", LogSeverity.NOMINAL)
+                    appendLog("ANT-AI", "Edited Screen Filter Ant visual via Gemini 3.1 Flash Image.", LogSeverity.NOMINAL)
                     showToast("Screen Filter Ant Visual Edited")
                 } else {
-                    val msg = "No edited image was returned by the model."
-                    Log.e(TAG, msg)
-                    _uiState.update {
-                        it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                    }
-                    appendLog("ANT-AI", msg, LogSeverity.WARNING)
+                    handleAiFailloadFallback(promptText, activeMode, isEdit = true, baseBitmap = baseBitmap)
                 }
-            } catch (e: TimeoutCancellationException) {
-                Log.e(TAG, "Image editing timed out", e)
-                val msg = "Image editing timed out after 60 seconds. Please try again."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
-            } catch (e: QuotaExceededException) {
-                Log.e(TAG, "Quota exceeded during image editing", e)
-                val msg = "Rate limit exceeded. Please try again later."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Image editing failed", e)
-                val msg = e.localizedMessage ?: "Image editing failed."
-                _uiState.update {
-                    it.copy(screenFilterAiState = ScreenFilterAiUiState.Error(msg))
-                }
-                appendLog("ANT-AI", msg, LogSeverity.WARNING)
+                handleAiFailloadFallback(promptText, activeMode, isEdit = true, baseBitmap = baseBitmap, errorMsg = e.message)
             }
         }
     }
@@ -3103,140 +4110,6 @@ class AxiomViewModel(
 
         appendLog("FAILLOAD", interceptNote, LogSeverity.NOMINAL)
         showToast("IF FAILLOAD POSSIBLE: Synthesized Safe Local Ant-Filter Bitmap")
-    }
-
-    fun selectModularityBlock(blockId: String) {
-        _uiState.update { state ->
-            state.copy(
-                modularStackLicensingState = state.modularStackLicensingState.copy(
-                    selectedBlockId = blockId
-                )
-            )
-        }
-    }
-
-    fun selectEnvComparisonFilter(filter: EnvComparisonCategoryFilter) {
-        _uiState.update { state ->
-            state.copy(
-                modularStackLicensingState = state.modularStackLicensingState.copy(
-                    selectedEnvFilter = filter
-                )
-            )
-        }
-    }
-
-    fun selectMarketingPillar(pillarId: String) {
-        _uiState.update { state ->
-            state.copy(
-                modularStackLicensingState = state.modularStackLicensingState.copy(
-                    selectedMarketingPillarId = pillarId
-                )
-            )
-        }
-    }
-
-    fun simulateLicensingTcDrift() {
-        _uiState.update { state ->
-            val drifted = ModularStackAndLicensingEngine.simulateLicensingDrift(state.modularStackLicensingState)
-            state.copy(modularStackLicensingState = drifted)
-        }
-        appendLog(
-            "T&C-AUDIT",
-            "Simulated T&C licensing drift ($29/mo subscription & custodial ambiguity injected).",
-            LogSeverity.WARNING
-        )
-        showToast("Simulated T&C Drift — Click Self-Correct & Seal to remediate")
-    }
-
-    fun executeLicensingSelfCorrectionAndSeal() {
-        val currentMod = _uiState.value.modularStackLicensingState
-        val healed = ModularStackAndLicensingEngine.selfCorrectAndSealLicensing(currentMod)
-        val codexEntry = ModularStackAndLicensingEngine.buildSelfCorrectedLicensingCodexEntry(healed)
-        _uiState.update { state ->
-            state.copy(modularStackLicensingState = healed)
-        }
-        loadCodexEntryIntoVerifier(codexEntry)
-        executeScriptCleanAndPersistAudit()
-        appendLog(
-            "T&C-HEAL",
-            "Self-corrected Licensing T&C to S:OpenSource(nosubs!-asis)Contract! ($0.00 recurring, MiCA Recital 22 & DORA Art. 11 sealed).",
-            LogSeverity.NOMINAL
-        )
-        showToast("Self-Corrected & Sealed Licensing T&C (${healed.licensingSealSha256.take(12)}...)")
-    }
-
-    fun loadModularityBlockIntoVerifier(block: ModularityBlockSpec) {
-        val entry = ModularStackAndLicensingEngine.toCodexEntry(block)
-        loadCodexEntryIntoVerifier(entry)
-        executeScriptCleanAndPersistAudit()
-        showToast("Loaded & Verified ${block.id} (${block.shortTag})")
-    }
-
-    fun selectTargetDeviceMode(mode: DeployTargetDeviceMode) {
-        _uiState.update { state ->
-            state.copy(
-                modularStackLicensingState = ModularStackAndLicensingEngine.selectTargetDeviceMode(
-                    state.modularStackLicensingState,
-                    mode
-                )
-            )
-        }
-        showToast("2FA Target Runtime: ${mode.runtimeEnvToken}")
-    }
-
-    fun selectMetallurgiaPreset(preset: MetallurgiaSteelAlloyPreset) {
-        _uiState.update { state ->
-            state.copy(
-                modularStackLicensingState = ModularStackAndLicensingEngine.selectMetallurgiaPreset(
-                    state.modularStackLicensingState,
-                    preset
-                )
-            )
-        }
-        showToast("Selected ${preset.badge} (mu_r=${preset.relativePermeabilityMuR})")
-    }
-
-    fun engageMetallurgiaAntiMagPosition(preset: MetallurgiaSteelAlloyPreset) {
-        _uiState.update { state ->
-            val updatedMod = ModularStackAndLicensingEngine.selectMetallurgiaPreset(
-                state.modularStackLicensingState,
-                preset
-            )
-            state.copy(
-                modularStackLicensingState = updatedMod,
-                antiMagPulse = preset.antiMagPulseTarget,
-                magPressure = preset.magPressureTarget,
-                hexScale = preset.hexScaleTarget,
-                orbitalYawNorm = 0.0f,
-                orbitalPitchNorm = 0.0f,
-                perturbation = 0.0f,
-                glslGateTrue = true,
-                glslGateDiagnostic = "Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION) // ${preset.badge} Locked"
-            )
-        }
-        appendLog(
-            "METALLURGIA",
-            "Engaged ${preset.badge} (${preset.positionVectorLabel}, mu_r=${preset.relativePermeabilityMuR}, u_antiMag=${preset.antiMagPulseTarget}).",
-            LogSeverity.NOMINAL
-        )
-        showToast("Engaged ${preset.badge} in 3D Viewport")
-    }
-
-    fun verifyAndSeal2faDeployLogic() {
-        val currentMod = _uiState.value.modularStackLicensingState
-        val entry = ModularStackAndLicensingEngine.buildTwoFactorAndMetallurgiaCodexEntry(currentMod)
-        loadCodexEntryIntoVerifier(entry)
-        executeScriptCleanAndPersistAudit()
-        appendLog(
-            "2FA-DEPLOY",
-            "Verified & Sealed 2FA Output Logic (${currentMod.twoFactorComparison.composite2faPairingToken}) for ${currentMod.twoFactorComparison.targetDeviceMode.runtimeEnvToken}.",
-            LogSeverity.NOMINAL
-        )
-        showToast("Verified & Sealed 2FA Deploy Logic (${currentMod.twoFactorComparison.composite2faPairingToken})")
-    }
-
-    fun setShowBlockMindDashboard(show: Boolean) {
-        _uiState.update { it.copy(showBlockMindDashboard = show) }
     }
 
     fun setShowGlslModal(show: Boolean) {

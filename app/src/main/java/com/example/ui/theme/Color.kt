@@ -8,15 +8,6 @@ val HudSurface = Color(0xFF0C1322)
 val HudBorderCyan = Color(0x4700F3FF)
 val SlateBorder = Color(0xFF1E293B)
 
-// Metallurgia:THEME(STEEL ALLOY ANTIMAG POSITION) Palette Tokens
-val SteelAlloyGunmetal = Color(0xFF0A0F18)
-val SteelAlloyBrushedSurface = Color(0xFF131C2B)
-val SteelAlloyChromeEdge = Color(0xFF64748B)
-val AntiMagCobaltCyan = Color(0xFF38BDF8)
-val AntiMagAusteniteSilver = Color(0xFFCBD5E1)
-val AntiMagTitaniumGold = Color(0xFFF59E0B)
-val AntiMagFaradayEmerald = Color(0xFF10B981)
-
 val NeonCyan = Color(0xFF00F3FF)
 val NeonPink = Color(0xFFFF0055)
 val NeonAmber = Color(0xFFFFAA00)

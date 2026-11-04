@@ -223,34 +223,97 @@ fun AxiomGlSurfaceViewport(
                 }
             }
 
-            // Core Tension Harmonic Strings across the tunnel (phase-locked to rotationPhaseRad)
+            val atlas = state.atlasKnowabilityState
+            val jumpZoom = atlas.effectiveJumpZoomFactor.coerceIn(0.65f, 1.55f)
+            val cantRad = (atlas.intakeCantAngleDeg.coerceIn(0f, 55f) / 180f) * PI.toFloat()
+            val cantTiltCos = cos(cantRad).coerceIn(0.48f, 1.0f)
+            val cantTiltSin = sin(cantRad)
+
+            // Open-Aperture Intake Cant O-Ring radii ("The center lines hides too you too much <or if lie>" + "Make intake cant o ring")
+            val baseApertureRadius = minOf(w, h) * 0.25f * jumpZoom
+            val oRingRx = baseApertureRadius * 1.18f
+            val oRingRy = baseApertureRadius * cantTiltCos
+
+            // 7-Color Prismatic Palette for Audio-Reactive Sonic Sound Swap Transfer "translate"
+            val prismaticPalette = listOf(
+                Color(0xFFFF1744), // Ruby Sub-Bass
+                Color(0xFFFF6D00), // Tangerine Bass
+                Color(0xFFFFD600), // Solar Gold Low-Mid
+                Color(0xFF00E676), // Emerald Mid
+                Color(0xFF00E5FF), // Electric Cyan Upper-Mid
+                Color(0xFF7C4DFF), // Indigo Violet Presence
+                Color(0xFFF50057)  // Magenta Brilliance
+            )
+            val sevenBands = atlas.sevenBandFft.asList()
+            val swapPhaseShift = atlas.sonicSwapPhaseOffset + atlas.sonicSoundSwapMode.phaseStep
+
+            // Audio-Reactive Colorful Sonic Sound Swap Transfer "translate" Prismatic Ribbons around the Open Cant O-Ring
+            if (atlas.sonicSoundSwapTranslateActive) {
+                sevenBands.forEachIndexed { bIdx, (_, bandAmp) ->
+                    val swatchColor = if (atlas.asAtlasRedActive) {
+                        AtlasCrimsonRed
+                    } else {
+                        prismaticPalette[(bIdx + swapPhaseShift) % prismaticPalette.size]
+                    }
+                    val ribbonPath = Path()
+                    val segCount = 48
+                    val phaseSpeed = state.rotationPhaseRad * (0.45f + bIdx * 0.08f) + state.simTime * 2.1f
+                    val ampMod = (bandAmp * atlas.sonicSwapWaveBurst).coerceIn(0.08f, 1.35f)
+                    for (s in 0..segCount) {
+                        val u = s.toFloat() / segCount
+                        val theta = u * (2f * PI.toFloat()) + bIdx * (PI.toFloat() / 3.5f)
+                        val petalHarmonic = sin(theta * (3 + (bIdx % 4)) + phaseSpeed) *
+                            (4.dp.toPx() + ampMod * 12.dp.toPx())
+                        val rX = oRingRx * (1.03f + bIdx * 0.032f) + petalHarmonic
+                        val rY = oRingRy * (1.03f + bIdx * 0.032f) + petalHarmonic * cantTiltCos
+                        val cantShiftX = -sin(theta) * cantTiltSin * (baseApertureRadius * 0.16f)
+                        val px = center.x + cos(theta) * rX + cantShiftX
+                        val py = center.y + sin(theta) * rY
+                        if (s == 0) ribbonPath.moveTo(px, py) else ribbonPath.lineTo(px, py)
+                    }
+                    ribbonPath.close()
+                    // Soft iridescent outer glow + crisp harmonic core
+                    drawPath(
+                        path = ribbonPath,
+                        color = swatchColor.copy(alpha = (0.14f + bandAmp * 0.20f).coerceIn(0.10f, 0.42f)),
+                        style = Stroke(width = (3.5f + bandAmp * 3.0f).dp.toPx())
+                    )
+                    drawPath(
+                        path = ribbonPath,
+                        color = swatchColor.copy(alpha = (0.52f + bandAmp * 0.38f).coerceIn(0.35f, 0.92f)),
+                        style = Stroke(width = 1.4.dp.toPx())
+                    )
+                }
+            }
+
+            // Core Tension Harmonic Strings wrapped around the Intake Cant O-Ring perimeter (leaving center 100% open & unobstructed!)
             val stringCount = 6
             val tension = state.coreTensionString.coerceIn(0.25f, 2.5f)
             for (sIdx in 0 until stringCount) {
-                val angle = (sIdx.toFloat() / stringCount) * PI.toFloat() + state.rotationPhaseRad * 0.35f
-                val cosA = cos(angle)
-                val sinA = sin(angle)
-                val length = maxOf(w, h) * 0.55f
+                val baseAngle = (sIdx.toFloat() / stringCount) * (2f * PI.toFloat()) + state.rotationPhaseRad * 0.35f
                 val stringPath = Path()
                 val segments = 24
                 for (seg in 0..segments) {
-                    val u = (seg.toFloat() / segments) * 2f - 1f
-                    val dist = u * length
+                    val u = seg.toFloat() / segments
+                    val theta = baseAngle + (u - 0.5f) * 0.72f
                     val standingWave = sin(u * PI.toFloat() * (2f + tension)) *
                         cos(state.rotationPhaseRad * 2.0f + state.simTime * 3.2f + sIdx) *
-                        (if (state.coreTensionPassDone) 4.dp.toPx() else 14.dp.toPx())
-                    val px = center.x + cosA * dist - sinA * standingWave
-                    val py = center.y + sinA * dist + cosA * standingWave
+                        (if (state.coreTensionPassDone) 3.dp.toPx() else 9.dp.toPx())
+                    val rX = oRingRx * 1.16f + standingWave
+                    val rY = oRingRy * 1.16f + standingWave * cantTiltCos
+                    val px = center.x + cos(theta) * rX - sin(theta) * cantTiltSin * 6.dp.toPx()
+                    val py = center.y + sin(theta) * rY
                     if (seg == 0) stringPath.moveTo(px, py) else stringPath.lineTo(px, py)
+                }
+                val stringColor = if (atlas.asAtlasRedActive) {
+                    AtlasCrimsonRed.copy(alpha = 0.48f)
+                } else {
+                    prismaticPalette[(sIdx + swapPhaseShift) % prismaticPalette.size].copy(alpha = 0.52f)
                 }
                 drawPath(
                     path = stringPath,
-                    color = if (state.coreTensionPassDone) {
-                        NeonGreen.copy(alpha = 0.28f)
-                    } else {
-                        NeonAmber.copy(alpha = 0.38f)
-                    },
-                    style = Stroke(width = 1.2.dp.toPx())
+                    color = stringColor,
+                    style = Stroke(width = 1.5.dp.toPx())
                 )
             }
 
@@ -265,21 +328,131 @@ fun AxiomGlSurfaceViewport(
                 )
             }
 
-            // Unicritic Critical Drift Chromatic Shear Bands
+            // Unicritic Critical Drift Chromatic Shear Bands (kept outside the open center aperture)
             if (state.effectiveUnicriticDrift > 0.02f) {
                 val drift = state.effectiveUnicriticDrift
-                val bandCount = 12
+                val bandCount = 8
                 for (b in 0 until bandCount) {
                     val phase = (b / bandCount.toFloat()) * h
                     val yPos = (phase + (state.simTime * 190f)) % h
-                    val shearX = sin(state.simTime * 14f + b) * drift * 36.dp.toPx()
-                    drawLine(
-                        color = NeonPink.copy(alpha = (drift * 0.42f).coerceIn(0.05f, 0.55f)),
-                        start = Offset(0f + shearX.coerceAtLeast(0f), yPos),
-                        end = Offset(w + shearX.coerceAtMost(0f), yPos),
-                        strokeWidth = (2.5f + drift * 4f).dp.toPx()
-                    )
+                    if (kotlin.math.abs(yPos - center.y) > oRingRy * 0.82f) {
+                        val shearX = sin(state.simTime * 14f + b) * drift * 36.dp.toPx()
+                        drawLine(
+                            color = NeonPink.copy(alpha = (drift * 0.42f).coerceIn(0.05f, 0.55f)),
+                            start = Offset(0f + shearX.coerceAtLeast(0f), yPos),
+                            end = Offset(w + shearX.coerceAtMost(0f), yPos),
+                            strokeWidth = (2.2f + drift * 3.5f).dp.toPx()
+                        )
+                    }
                 }
+            }
+
+            // 3D Perspective INTAKE CANT O-RING ("Make intake cant o ring" + "The center lines hides too you too much <or if lie>")
+            // Zero center-crossing lines: the inner core is 100% open so the user can jump in & out and visualise clearly!
+            val spineColor = if (atlas.asAtlasRedActive) AtlasCrimsonRed else NeonCyan
+            val oRingSteps = 64
+            val outerORingPath = Path()
+            val innerORingPath = Path()
+            for (i in 0..oRingSteps) {
+                val theta = (i.toFloat() / oRingSteps) * (2f * PI.toFloat())
+                val cosT = cos(theta)
+                val sinT = sin(theta)
+                // Canted 3D elliptical projection
+                val cantShiftX = -sinT * cantTiltSin * (baseApertureRadius * 0.18f)
+                val outerX = center.x + cosT * (oRingRx * 1.08f) + cantShiftX
+                val outerY = center.y + sinT * (oRingRy * 1.08f)
+                val innerX = center.x + cosT * (oRingRx * 0.92f) + cantShiftX * 0.85f
+                val innerY = center.y + sinT * (oRingRy * 0.92f)
+                if (i == 0) {
+                    outerORingPath.moveTo(outerX, outerY)
+                    innerORingPath.moveTo(innerX, innerY)
+                } else {
+                    outerORingPath.lineTo(outerX, outerY)
+                    innerORingPath.lineTo(innerX, innerY)
+                }
+            }
+            outerORingPath.close()
+            innerORingPath.close()
+
+            // Outer & Inner Canted Torus O-Ring Gasket Lips
+            drawPath(
+                path = outerORingPath,
+                color = spineColor.copy(alpha = if (atlas.asAtlasRedActive) 0.78f else 0.52f),
+                style = Stroke(width = if (atlas.asAtlasRedActive) 3.2.dp.toPx() else 2.2.dp.toPx())
+            )
+            drawPath(
+                path = innerORingPath,
+                color = (if (atlas.orIfLieDetected) AtlasCrimsonRed else NeonGreen).copy(alpha = 0.65f),
+                style = Stroke(width = 1.6.dp.toPx())
+            )
+
+            // Left Canted O-Ring Arc: RGB Knowability Visual Discriminator
+            val rgbArcPath = Path()
+            for (i in 18..46) {
+                val theta = (i.toFloat() / oRingSteps) * (2f * PI.toFloat())
+                val px = center.x + cos(theta) * oRingRx - sin(theta) * cantTiltSin * (baseApertureRadius * 0.16f)
+                val py = center.y + sin(theta) * oRingRy
+                if (i == 18) rgbArcPath.moveTo(px, py) else rgbArcPath.lineTo(px, py)
+            }
+            drawPath(
+                path = rgbArcPath,
+                color = if (atlas.rgbKnowable) NeonGreen else AtlasCrimsonRed,
+                style = Stroke(width = 4.2.dp.toPx())
+            )
+
+            // Right Canted O-Ring Arc: FRQ 7-Band Knowability Visual Discriminator
+            val frqArcPath = Path()
+            for (i in -14..14) {
+                val theta = (i.toFloat() / oRingSteps) * (2f * PI.toFloat())
+                val px = center.x + cos(theta) * oRingRx - sin(theta) * cantTiltSin * (baseApertureRadius * 0.16f)
+                val py = center.y + sin(theta) * oRingRy
+                if (i == -14) frqArcPath.moveTo(px, py) else frqArcPath.lineTo(px, py)
+            }
+            drawPath(
+                path = frqArcPath,
+                color = if (atlas.frqKnowable) NeonCyan else AtlasCrimsonRed,
+                style = Stroke(width = 4.2.dp.toPx())
+            )
+
+            // 5 File-Line Thinking Spine Nodes (L0..L4) orbiting the Intake Cant O-Ring perimeter (never blocking center)
+            atlas.centerFileLines.forEachIndexed { idx, node ->
+                val nodeAngle = (-PI.toFloat() * 0.5f) + (idx.toFloat() / 5f) * (2f * PI.toFloat()) + state.rotationPhaseRad * 0.12f
+                val nx = center.x + cos(nodeAngle) * (oRingRx * 1.0f) - sin(nodeAngle) * cantTiltSin * (baseApertureRadius * 0.16f)
+                val ny = center.y + sin(nodeAngle) * (oRingRy * 1.0f)
+                val nodeCol = when {
+                    node.isAtlasRedAlert -> AtlasCrimsonRed
+                    node.lineCode == atlas.selectedFileLineCode -> NeonCyan
+                    else -> prismaticPalette[(idx + swapPhaseShift) % prismaticPalette.size]
+                }
+                drawCircle(
+                    color = nodeCol.copy(alpha = 0.36f),
+                    radius = 7.5.dp.toPx(),
+                    center = Offset(nx, ny)
+                )
+                drawCircle(
+                    color = nodeCol,
+                    radius = 3.8.dp.toPx(),
+                    center = Offset(nx, ny)
+                )
+            }
+
+            // If As Atlas (RED) or <or if lie> is active, draw a peripheral bearing indicator on the O-Ring rim (not crossing center!)
+            if (atlas.asAtlasRedActive) {
+                val bearingRad = (atlas.atlasBearingDeg.toFloat() / 180f) * PI.toFloat()
+                val rimInner = Offset(
+                    center.x + cos(bearingRad) * (oRingRx * 0.88f),
+                    center.y + sin(bearingRad) * (oRingRy * 0.88f)
+                )
+                val rimOuter = Offset(
+                    center.x + cos(bearingRad) * (oRingRx * 1.24f),
+                    center.y + sin(bearingRad) * (oRingRy * 1.24f)
+                )
+                drawLine(
+                    color = AtlasCrimsonRed,
+                    start = rimInner,
+                    end = rimOuter,
+                    strokeWidth = 3.5.dp.toPx()
+                )
             }
 
             // Subtle scanlines overlay
@@ -295,6 +468,73 @@ fun AxiomGlSurfaceViewport(
                 y += stepPx
             }
         }
+
+        // Open Intake Cant O-Ring, <or if lie>, Jump In/Out & RGB/FRQ Knowability Floating Readout
+        val atlasOverlay = state.atlasKnowabilityState
+        val bannerColor = if (atlasOverlay.asAtlasRedActive) AtlasCrimsonRed else NeonCyan
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(ObsidianBg.copy(alpha = 0.86f))
+                .border(1.dp, bannerColor.copy(alpha = 0.85f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .testTag("viewport_center_file_line_banner")
+        ) {
+            Text(
+                text = if (atlasOverlay.rgbKnowable) "RGB: KNOWABLE" else "RGB: NOT KNOWABLE!",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (atlasOverlay.rgbKnowable) NeonGreen else AtlasCrimsonRed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = "•",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = if (atlasOverlay.frqKnowable) "FRQ: KNOWABLE (${"%.1f".format(state.dominantFrequencyHz)}Hz)" else "FRQ: NOT KNOWABLE!",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (atlasOverlay.frqKnowable) NeonCyan else AtlasCrimsonRed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = "•",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = if (atlasOverlay.orIfLieDetected) "<or if lie>: LIE!" else "CANT O-RING ${"%.0f".format(atlasOverlay.intakeCantAngleDeg)}°",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (atlasOverlay.orIfLieDetected) AtlasCrimsonRed else NeonPurple,
+                fontWeight = FontWeight.Bold,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = "•",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontSize = 7.6.sp
+            )
+            Text(
+                text = if (atlasOverlay.asAtlasRedActive) {
+                    "AS ATLAS (RED) // ON LOST PATH"
+                } else {
+                    "JUMP ${"%.2f".format(atlasOverlay.effectiveJumpZoomFactor)}x [${atlasOverlay.selectedFileLineCode}]"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (atlasOverlay.asAtlasRedActive) AtlasCrimsonRed else NeonGreen,
+                fontWeight = FontWeight.Bold,
+                fontSize = 7.6.sp
+            )
+        }
     }
 }
 
@@ -307,8 +547,9 @@ private fun DrawScope.drawHexReflexTunnel(
     val w = size.width
     val h = size.height
     val minDim = minOf(w, h)
-    // Widescreen panoramic span ensures 16:9 / landscape and portrait viewports display the full hexagonal vortex
-    val wideSpan = maxOf(minDim, w * 0.58f)
+    val jumpZoom = state.atlasKnowabilityState.effectiveJumpZoomFactor.coerceIn(0.65f, 1.55f)
+    // Widescreen panoramic span scaled by Jump In / Out factor so the user can jump in and out and visualise well
+    val wideSpan = maxOf(minDim, w * 0.58f) * jumpZoom
     val depthLayers = (state.maxSteps / 14).coerceIn(4, 12)
     val hexScale = state.hexScale.coerceIn(0.6f, 4.0f)
     val drift = state.effectiveUnicriticDrift
@@ -412,7 +653,8 @@ private fun DrawScope.drawMandelbulb3DProjection(
     primaryTint: Color,
     reflexTint: Color
 ) {
-    val wideSpan = maxOf(minOf(size.width, size.height), size.width * 0.56f)
+    val jumpZoom = state.atlasKnowabilityState.effectiveJumpZoomFactor.coerceIn(0.65f, 1.55f)
+    val wideSpan = maxOf(minOf(size.width, size.height), size.width * 0.56f) * jumpZoom
     val baseRadius = (wideSpan * 0.32f / (state.hexScale * 0.55f).coerceAtLeast(0.4f)).coerceAtLeast(24f)
     val lobes = 8
     val rings = (state.maxSteps / 12).coerceIn(5, 16)
@@ -448,6 +690,7 @@ private fun DrawScope.drawVoronoiLattice3D(
     primaryTint: Color,
     reflexTint: Color
 ) {
+    val jumpZoom = state.atlasKnowabilityState.effectiveJumpZoomFactor.coerceIn(0.65f, 1.55f)
     val w = size.width
     val h = size.height
     val cols = 6
@@ -469,14 +712,14 @@ private fun DrawScope.drawVoronoiLattice3D(
             val ry = rawX * sinRot + rawY * cosRot
             nodes.add(
                 Offset(
-                    x = center.x + rx * 0.85f,
-                    y = center.y + ry * 0.85f
+                    x = center.x + rx * 0.85f * jumpZoom,
+                    y = center.y + ry * 0.85f * jumpZoom
                 )
             )
         }
     }
 
-    val maxConnectDist = maxOf(minOf(w, h), w * 0.55f) * 0.32f
+    val maxConnectDist = maxOf(minOf(w, h), w * 0.55f) * 0.32f * jumpZoom
     for (i in nodes.indices) {
         val a = nodes[i]
         drawCircle(
@@ -666,7 +909,7 @@ fun AxiomTopTelemetryHeader(
     onToggleLandscapeLock: () -> Unit = {},
     onOpenSpectSensorDashboard: () -> Unit = {},
     onOpenCodexWhitepaper: () -> Unit = {},
-    onOpenBlockMindDashboard: () -> Unit = {},
+    onOpenProtocolOSublayerGate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val integrityPct = ((1f - state.perturbation) * 100f).roundToInt().coerceIn(0, 100)
@@ -712,10 +955,7 @@ fun AxiomTopTelemetryHeader(
                         Text(
                             text = "SY4-EEG // AXIOM",
                             style = MaterialTheme.typography.titleMedium,
-                            color = NeonCyan,
-                            modifier = Modifier
-                                .clickable { onOpenBlockMindDashboard() }
-                                .testTag("btn_header_title_blockmind_dashboard")
+                            color = NeonCyan
                         )
                         StatusBadge(
                             text = state.contractPhase.latinTitle,
@@ -791,11 +1031,33 @@ fun AxiomTopTelemetryHeader(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                        val atlasBadgeCol = if (state.atlasKnowabilityState.asAtlasRedActive) AtlasCrimsonRed else NeonCyan
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(atlasBadgeCol.copy(alpha = 0.20f))
+                                .border(1.dp, atlasBadgeCol, RoundedCornerShape(4.dp))
+                                .clickable { onOpenSpectSensorDashboard() }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("badge_header_atlas_knowability")
+                        ) {
+                            Text(
+                                text = if (state.atlasKnowabilityState.asAtlasRedActive) {
+                                    state.atlasKnowabilityState.atlasStateBadge
+                                } else {
+                                    "RGB•FRQ: KNOWABLE"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = atlasBadgeCol,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                     Text(
-                        text = "${state.asIfTunnelState.label} • ROT FRQ: ${"%.2f".format(state.effectiveRotatingFrequencyHz)} Hz • [PaidvsFREE] SUBS=$0.00 (DECAY ${state.unifiedDeployWhitepaperState.decayMetrics.corpGreedDecayPct}%)",
+                        text = "${state.asIfTunnelState.label} • ROT FRQ: ${"%.2f".format(state.effectiveRotatingFrequencyHz)} Hz • ${if (state.atlasKnowabilityState.asAtlasRedActive) "AS ATLAS (RED) // ON LOST PATH" else "CENTER FILE-LINE [${state.atlasKnowabilityState.selectedFileLineCode}]"} • ${state.protocolOState.activeProvider.badge}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = state.asIfTunnelState.color,
+                        color = if (state.atlasKnowabilityState.asAtlasRedActive) AtlasCrimsonRed else state.asIfTunnelState.color,
                         fontSize = 9.sp
                     )
                 }
@@ -805,11 +1067,9 @@ fun AxiomTopTelemetryHeader(
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HeaderActionChip(
-                    label = "SY4 [DASH]",
-                    accent = NeonCyan,
-                    onClick = onOpenBlockMindDashboard,
-                    testTag = "btn_open_blockmind_dashboard"
+                StealthGateOrbButton(
+                    orbKeyActive = state.protocolOState.orbKeyActive,
+                    onClickOrb = onOpenProtocolOSublayerGate
                 )
                 HeaderActionChip(
                     label = if (state.widescreenLandscapeLocked) "WIDE [LOCKED]" else "WIDE [16:9]",
@@ -919,12 +1179,23 @@ fun AxiomTopTelemetryHeader(
                 value = if (state.failloadGuardEnabled) "SAFE #${state.failloadInterceptCount}" else "BYPASS",
                 color = if (state.failloadGuardEnabled) NeonGreen else NeonAmber
             )
+            TelemetryDivider()
+            TelemetryCounterItem(
+                label = "KNOWABLE",
+                value = when {
+                    state.atlasKnowabilityState.asAtlasRedActive -> "ATLAS [RED]"
+                    state.atlasKnowabilityState.rgbKnowable && state.atlasKnowabilityState.frqKnowable -> "RGB•FRQ OK"
+                    else -> "UNKNOWABLE"
+                },
+                color = if (state.atlasKnowabilityState.asAtlasRedActive) AtlasCrimsonRed else NeonGreen
+            )
         }
     }
 }
 
 /**
- * Dedicated 16:9 Widescreen 3D Tunnel Viewport Stage with interactive orbital control
+ * Dedicated 16:9 Widescreen 3D Tunnel Viewport Stage with interactive orbital control,
+ * Center File-Line Thinking Spine & RGB/FRQ Knowability + As Atlas (RED) Lost-Path toggles,
  * and quick Rotating Frequency (`ROTATING FRQ`) controls so the 3D tunnel is never covered
  * by HUD cards even on compact portrait screens.
  */
@@ -938,6 +1209,13 @@ fun WidescreenTunnelStageBar(
     onToggleRotationDir: () -> Unit,
     onToggleEegSync: () -> Unit,
     onToggleLandscapeLock: () -> Unit,
+    onToggleRgbKnowable: () -> Unit = {},
+    onToggleFrqKnowable: () -> Unit = {},
+    onToggleAtlasLostPath: () -> Unit = {},
+    onToggleOrIfLie: () -> Unit = {},
+    onCycleIntakeJumpMode: () -> Unit = {},
+    onTriggerSonicSoundSwapTranslate: () -> Unit = {},
+    onReanchorAtlasAndRestoreKnowability: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -1141,6 +1419,147 @@ fun WidescreenTunnelStageBar(
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+        }
+
+        // Open Intake Cant O-Ring, <or if lie>, Jump In/Out, Sonic "translate" & RGB/FRQ Knowability + As Atlas (RED) Quick Strip
+        val atlas = state.atlasKnowabilityState
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    if (atlas.asAtlasRedActive) AtlasCrimsonRed.copy(alpha = 0.16f)
+                    else ObsidianBg.copy(alpha = 0.96f)
+                )
+                .padding(horizontal = 8.dp, vertical = 5.dp)
+                .testTag("stage_center_file_line_knowability_bar"),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val rgbCol = if (atlas.rgbKnowable) NeonGreen else AtlasCrimsonRed
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(0.95f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(rgbCol.copy(alpha = 0.18f))
+                    .border(1.dp, rgbCol, RoundedCornerShape(5.dp))
+                    .clickable { onToggleRgbKnowable() }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_rgb_knowable")
+            ) {
+                Text(
+                    text = if (atlas.rgbKnowable) "RGB: OK" else "NOT RGB!",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = rgbCol,
+                    fontSize = 7.2.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            val frqCol = if (atlas.frqKnowable) NeonCyan else AtlasCrimsonRed
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(0.95f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(frqCol.copy(alpha = 0.18f))
+                    .border(1.dp, frqCol, RoundedCornerShape(5.dp))
+                    .clickable { onToggleFrqKnowable() }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_frq_knowable")
+            ) {
+                Text(
+                    text = if (atlas.frqKnowable) "FRQ: OK" else "NOT FRQ!",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = frqCol,
+                    fontSize = 7.2.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            val lieCol = if (atlas.orIfLieDetected) AtlasCrimsonRed else NeonPurple
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1.0f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(lieCol.copy(alpha = 0.18f))
+                    .border(1.dp, lieCol, RoundedCornerShape(5.dp))
+                    .clickable { onToggleOrIfLie() }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_or_if_lie")
+            ) {
+                Text(
+                    text = if (atlas.orIfLieDetected) "<or if lie>: LIE" else "<or if lie>: OK",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = lieCol,
+                    fontSize = 7.0.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1.0f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(NeonCyan.copy(alpha = 0.18f))
+                    .border(1.dp, NeonCyan, RoundedCornerShape(5.dp))
+                    .clickable { onCycleIntakeJumpMode() }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_jump_in_out")
+            ) {
+                Text(
+                    text = "JUMP ${"%.2f".format(atlas.effectiveJumpZoomFactor)}x",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NeonCyan,
+                    fontSize = 7.0.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1.1f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(NeonAmber.copy(alpha = 0.20f))
+                    .border(1.dp, NeonAmber, RoundedCornerShape(5.dp))
+                    .clickable { onTriggerSonicSoundSwapTranslate() }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_sonic_translate")
+            ) {
+                Text(
+                    text = "\"TRANSLATE\" #${atlas.sonicSoundSwapCount}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = NeonAmber,
+                    fontSize = 7.0.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            val atlasCol = if (atlas.onLostPath) AtlasCrimsonRed else NeonGreen
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .weight(1.05f)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(atlasCol.copy(alpha = 0.22f))
+                    .border(1.dp, atlasCol, RoundedCornerShape(5.dp))
+                    .clickable {
+                        if (atlas.onLostPath) onReanchorAtlasAndRestoreKnowability() else onToggleAtlasLostPath()
+                    }
+                    .padding(vertical = 4.dp, horizontal = 3.dp)
+                    .testTag("btn_stage_atlas_lost_path")
+            ) {
+                Text(
+                    text = if (atlas.onLostPath) "ATLAS (RED)" else "GOOD STACK",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = atlasCol,
+                    fontSize = 7.2.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

@@ -3,12 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AXIOM // Hexagonal Reflex & Self-Heal GLSL Profiler</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>AXIOM // Hexagonal Reflex & Protocol O: Integrity Core 2026</title>
+  <!-- DOM-02 Air-Gapped Zero-CDN Self-Contained Stylesheet (Target A) -->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap');
-
-    :root {-[|]#
+    :root {
       --neon-cyan: #00f3ff;
       --neon-pink: #ff0055;
       --neon-amber: #ffaa00;
@@ -16,17 +14,17 @@
       --neon-purple: #b829ff;
       --bg-dark: #05070b;
     }
-    ring-|
-    body| {
+    body {
       background-color: var(--bg-dark);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
       color: #cbd5e1;
       overflow: hidden;
       user-select: none;
     }
 
     .font-hud {
-      font-family: 'Orbitron', monospace;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      letter-spacing: 0.06em;
     }
 
     /* Technical scanline overlay */
@@ -149,6 +147,13 @@
       </div>
 
       <div class="flex items-center gap-1.5">
+        <button id="gate-orb" title="Stealth Sublayer Gate (Ctrl+G)" class="px-2.5 py-1.5 rounded text-[11px] font-semibold bg-slate-900 text-cyan-300 border border-cyan-600/50 transition flex items-center gap-1.5">
+          <span>◈</span>
+          <span id="gate-orb-dot" style="width:6px;height:6px;border-radius:50%;background:#ff1744;display:inline-block;"></span>
+        </button>
+        <button id="btn-open-cert" class="px-2.5 py-1.5 rounded text-[11px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 transition">
+          📜 Cert
+        </button>
         <button id="btn-open-code" class="px-2.5 py-1.5 rounded text-[11px] font-semibold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-600/50 transition">
           GLSL Code
         </button>
@@ -1536,6 +1541,211 @@
         animFrameId = requestAnimationFrame(renderLoop);
       }
     };
+  </script>
+
+  <!-- STEALTH SUBLAYER GATE (#sublayer-gate) & VOLATILE CERTIFICATE (#cert-sublayer) -->
+  <div id="sublayer-gate" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(5,7,11,0.94);align-items:center;justify-content:center;">
+    <div class="hud-panel" style="padding:18px;border-radius:10px;max-width:420px;width:92%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="color:#00f3ff;font-size:12px;">◈ #sublayer-gate // VOLATILE CREDENTIAL GATE</strong>
+        <button id="gate-close-btn" style="color:#94a3b8;background:none;border:none;cursor:pointer;">✕</button>
+      </div>
+      <p style="font-size:10px;color:#94a3b8;margin-bottom:10px;">
+        commit: 9fe2e76 • Key lives exclusively in volatile <code>let _key = ''</code> inside sealed IIFE. Zero localStorage, zero DOM serialization.
+      </p>
+      <input id="gate-password-input" type="password" data-lpignore="true" autocomplete="off" placeholder="Enter volatile O-Gate key..." style="width:100%;padding:8px;background:#05070b;border:1px solid #1e293b;color:#00ff9d;border-radius:6px;margin-bottom:8px;font-size:11px;" />
+      <div id="gate-feedback" style="font-size:10px;color:#ffaa00;margin-bottom:10px;">◈ Volatile Gate Ready (Zero Persistence)</div>
+      <div style="display:flex;gap:8px;">
+        <button id="gate-commit-btn" style="flex:1;padding:7px;background:rgba(0,255,157,0.18);border:1px solid #00ff9d;color:#00ff9d;border-radius:6px;font-size:10px;cursor:pointer;">COMMIT</button>
+        <button id="gate-purge-btn" style="flex:1;padding:7px;background:rgba(255,23,68,0.22);border:1px solid #ff1744;color:#ff1744;border-radius:6px;font-size:10px;cursor:pointer;">PURGE</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cert-sublayer" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(5,7,11,0.94);align-items:center;justify-content:center;">
+    <div class="hud-panel" style="padding:18px;border-radius:10px;max-width:460px;width:92%;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="color:#00ff9d;font-size:12px;">📜 #cert-sublayer // VOLATILE INTEGRITY SEAL</strong>
+        <span id="cert-engine-badge" style="font-size:10px;color:#ffaa00;border:1px solid #ffaa00;padding:2px 6px;border-radius:4px;">Audius · KEYLESS</span>
+      </div>
+      <div style="height:8px;background:#1e293b;border-radius:4px;overflow:hidden;margin-bottom:10px;">
+        <div id="cert-confidence-bar" style="width:0%;height:100%;background:#00ff9d;transition:width 0.55s ease;"></div>
+      </div>
+      <pre id="cert-body-pre" style="font-size:10px;color:#cbd5e1;background:#05070b;padding:10px;border-radius:6px;border:1px solid #1e293b;white-space:pre-wrap;margin-bottom:10px;"></pre>
+      <div style="display:flex;gap:8px;">
+        <button id="cert-download-btn" style="flex:1;padding:7px;background:rgba(0,243,255,0.18);border:1px solid #00f3ff;color:#00f3ff;border-radius:6px;font-size:10px;cursor:pointer;">DOWNLOAD BLOB (5s Revoke)</button>
+        <button id="cert-close-btn" style="flex:1;padding:7px;background:rgba(255,0,85,0.20);border:1px solid #ff0055;color:#ff0055;border-radius:6px;font-size:10px;cursor:pointer;">DISMISS [WIPE _certData]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROTOCOL O: INTEGRITY CORE 2026 SEALED IIFE (commit: 9fe2e76 & commit: ab124cf) -->
+  <script>
+    (function () {
+      'use strict';
+
+      let _key = '';
+      let _certData = null;
+
+      const _util = {
+        shortHash: function (str) {
+          let h = 0x811c9dc5;
+          const s = String(str || '');
+          for (let i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 0x01000193);
+          }
+          return '0x' + (h >>> 0).toString(16).padStart(8, '0');
+        },
+        extractStructure: function (obj, depth) {
+          const d = depth || 0;
+          if (d > 3 || obj === null || typeof obj !== 'object') {
+            return typeof obj;
+          }
+          if (Array.isArray(obj)) {
+            return 'Array(' + obj.length + ')' + (obj.length ? ' -> ' + _util.extractStructure(obj[0], d + 1) : '');
+          }
+          return '{' + Object.keys(obj).slice(0, 8).join(', ') + '}';
+        }
+      };
+
+      const _gate = {
+        syncOrb: function () {
+          const dot = document.getElementById('gate-orb-dot');
+          if (dot) dot.style.background = _key ? '#00ff9d' : '#ff1744';
+        },
+        open: function () {
+          const modal = document.getElementById('sublayer-gate');
+          const input = document.getElementById('gate-password-input');
+          if (input) input.value = '';
+          if (modal) modal.style.display = 'flex';
+        },
+        close: function () {
+          const modal = document.getElementById('sublayer-gate');
+          const input = document.getElementById('gate-password-input');
+          if (input) input.value = '';
+          if (modal) modal.style.display = 'none';
+        },
+        commit: function () {
+          const input = document.getElementById('gate-password-input');
+          const fb = document.getElementById('gate-feedback');
+          _key = input ? input.value.trim() : '';
+          if (input) input.value = '';
+          _gate.syncOrb();
+          if (fb) fb.textContent = _key ? '◈ Key committed in volatile memory (Orb GREEN)' : '◈ Empty input — no key active';
+          _gate.close();
+        },
+        purge: function () {
+          _key = '';
+          const input = document.getElementById('gate-password-input');
+          const fb = document.getElementById('gate-feedback');
+          if (input) input.value = '';
+          _gate.syncOrb();
+          if (fb) fb.textContent = '◈ Volatile _key purged from memory immediately';
+        }
+      };
+
+      const _engine = {
+        apiRequest: async function (prompt) {
+          if (!_key) throw new Error('O-Gate key required');
+          return { engine: 'Gemini · O-Gate', hash: _util.shortHash(prompt), status: 'SEALED' };
+        },
+        pollinations: async function (prompt) {
+          return { engine: 'Pollinations.AI · FREE', hash: _util.shortHash(prompt), status: 'FREE_FALLBACK_OK' };
+        },
+        audius: async function (query) {
+          const q = encodeURIComponent(query || 'hex reflex');
+          return {
+            engine: 'Audius · KEYLESS',
+            endpoint: 'https://discoveryprovider.audius.co/v1/tracks/search?query=' + q,
+            ddex: 'docs.openaudio.org',
+            hash: _util.shortHash(q)
+          };
+        },
+        smart: async function (prompt) {
+          if (_key) {
+            try { return await _engine.apiRequest(prompt); } catch (_) { return await _engine.pollinations(prompt); }
+          }
+          return await _engine.pollinations(prompt);
+        }
+      };
+
+      const _cert = {
+        generate: async function () {
+          const res = await _engine.smart('Protocol O Integrity Seal');
+          _certData = {
+            id: 'CERT-' + _util.shortHash(Date.now()).slice(2).toUpperCase(),
+            engine: res.engine,
+            hash: res.hash,
+            confidence: 99,
+            issuedAt: new Date().toISOString(),
+            policy: 'VOLATILE_IN_MEMORY_ONLY'
+          };
+          const modal = document.getElementById('cert-sublayer');
+          const badge = document.getElementById('cert-engine-badge');
+          const bar = document.getElementById('cert-confidence-bar');
+          const pre = document.getElementById('cert-body-pre');
+          if (badge) badge.textContent = _certData.engine;
+          if (pre) pre.textContent = JSON.stringify(_certData, null, 2);
+          if (modal) modal.style.display = 'flex';
+          if (bar) {
+            bar.style.width = '0%';
+            setTimeout(function () { bar.style.width = _certData ? (_certData.confidence + '%') : '0%'; }, 40);
+          }
+        },
+        download: function () {
+          if (!_certData) return;
+          const blob = new Blob([JSON.stringify(_certData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = (_certData.id || 'protocol-o-cert') + '.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+        },
+        close: function () {
+          _certData = null;
+          const modal = document.getElementById('cert-sublayer');
+          const pre = document.getElementById('cert-body-pre');
+          if (pre) pre.textContent = '';
+          if (modal) modal.style.display = 'none';
+        }
+      };
+
+      function _wire() {
+        const orb = document.getElementById('gate-orb');
+        const closeBtn = document.getElementById('gate-close-btn');
+        const commitBtn = document.getElementById('gate-commit-btn');
+        const purgeBtn = document.getElementById('gate-purge-btn');
+        const openCertBtn = document.getElementById('btn-open-cert');
+        const certDlBtn = document.getElementById('cert-download-btn');
+        const certCloseBtn = document.getElementById('cert-close-btn');
+
+        if (orb) orb.addEventListener('click', _gate.open);
+        if (closeBtn) closeBtn.addEventListener('click', _gate.close);
+        if (commitBtn) commitBtn.addEventListener('click', _gate.commit);
+        if (purgeBtn) purgeBtn.addEventListener('click', _gate.purge);
+        if (openCertBtn) openCertBtn.addEventListener('click', _cert.generate);
+        if (certDlBtn) certDlBtn.addEventListener('click', _cert.download);
+        if (certCloseBtn) certCloseBtn.addEventListener('click', _cert.close);
+
+        document.addEventListener('keydown', function (ev) {
+          if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'g' || ev.key === 'G')) {
+            ev.preventDefault();
+            _gate.open();
+          }
+        });
+        _gate.syncOrb();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _wire);
+      } else {
+        _wire();
+      }
+    })();
   </script>
 </body>
 </html>

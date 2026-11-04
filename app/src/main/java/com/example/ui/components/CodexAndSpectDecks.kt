@@ -46,11 +46,7 @@ import com.example.data.SpectStatEntity
 import com.example.model.BenchmarkReport
 import com.example.model.CodexEntry
 import com.example.model.RustCodexCatalog
-import com.example.service.DeployTargetDeviceMode
 import com.example.service.DeployTierMode
-import com.example.service.EnvComparisonCategoryFilter
-import com.example.service.MetallurgiaSteelAlloyPreset
-import com.example.service.ModularityBlockSpec
 import com.example.shader.AxiomShaders
 import com.example.ui.theme.HudBorderCyan
 import com.example.ui.theme.HudPanelBg
@@ -99,16 +95,6 @@ fun CodexAndShaHudDeck(
     onStepDecayEpoch: () -> Unit = {},
     onSelectOwnDevLogicNode: (String) -> Unit = {},
     onExecuteUnifiedDeployAndSealWhitepaper: () -> Unit = {},
-    onSelectModularityBlock: (String) -> Unit = {},
-    onSelectEnvComparisonFilter: (EnvComparisonCategoryFilter) -> Unit = {},
-    onSelectMarketingPillar: (String) -> Unit = {},
-    onSimulateLicensingDrift: () -> Unit = {},
-    onSelfCorrectAndSealLicensing: () -> Unit = {},
-    onLoadModularityBlockIntoVerifier: (ModularityBlockSpec) -> Unit = {},
-    onSelectTargetDeviceMode: (DeployTargetDeviceMode) -> Unit = {},
-    onSelectMetallurgiaPreset: (MetallurgiaSteelAlloyPreset) -> Unit = {},
-    onEngageMetallurgiaAntiMagPosition: (MetallurgiaSteelAlloyPreset) -> Unit = {},
-    onVerifyAndSeal2faDeployLogic: () -> Unit = {},
     onCopyToast: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -136,22 +122,6 @@ fun CodexAndShaHudDeck(
             onStepDecayEpoch = onStepDecayEpoch,
             onSelectOwnDevLogicNode = onSelectOwnDevLogicNode,
             onExecuteUnifiedDeployAndSealWhitepaper = onExecuteUnifiedDeployAndSealWhitepaper,
-            onCopyToast = onCopyToast
-        )
-
-        // 0000B. Unified MetaEye-Void + SY4-EEG BlockMind Modularity Blocks, Termux vs. All Else Matrix, Marketing & Self-Correcting Licensing T&C
-        ModularStackAndLicensingCard(
-            state = state,
-            onSelectModularityBlock = onSelectModularityBlock,
-            onSelectEnvComparisonFilter = onSelectEnvComparisonFilter,
-            onSelectMarketingPillar = onSelectMarketingPillar,
-            onSimulateLicensingDrift = onSimulateLicensingDrift,
-            onSelfCorrectAndSealLicensing = onSelfCorrectAndSealLicensing,
-            onLoadModularityBlockIntoVerifier = onLoadModularityBlockIntoVerifier,
-            onSelectTargetDeviceMode = onSelectTargetDeviceMode,
-            onSelectMetallurgiaPreset = onSelectMetallurgiaPreset,
-            onEngageMetallurgiaAntiMagPosition = onEngageMetallurgiaAntiMagPosition,
-            onVerifyAndSeal2faDeployLogic = onVerifyAndSeal2faDeployLogic,
             onCopyToast = onCopyToast
         )
 

@@ -1,8 +1,6 @@
 {
-  "name": "Personal-EEG GreyHighlist",
-  "description": "AXIOM 3D Hex-Reflex GLSL Profiler, SY4-EEG BlockMind & MetaEye-Void unified modularity stack, Termux Bionic vs. Standard Linux installer (fixsnake-v2 268435457), SHA-256 verifier, and self-correcting S:OpenSource(nosubs!-asis)Contract! compliance.",
+  "name": "SY4-EEG BlockMind",
+  "description": "AXIOM 3D Hex-Reflex GLSL Profiler, SY4-EEG BlockMind cognitive load dashboard with RGB biometric sync, Rust/SQLx/OpenAPI codex, SHA-256 script verifier, and local SPECT Room telemetry.",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

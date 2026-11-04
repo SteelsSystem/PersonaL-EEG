@@ -483,6 +483,33 @@ object RustCodexCatalog {
                     }
                 }
             """.trimIndent()
+        ),
+        CodexEntry(
+            id = "atlas-odm-knowability",
+            crateName = "atlas-odm-knowability // AS ATLAS (RED)",
+            registrySource = "1+ /Own/Dev/Logic_States // Center File-Line Spine",
+            categoryTag = "RGB/FRQ Knowability & ODM",
+            summary = "Discriminates RGB & FRQ knowability in real time, engages AS ATLAS (RED) when on a lost path, and unifies DOM-01..DOM-05 across the Center File-Line Thinking Spine.",
+            osaMapping = "Osa A-X-02..09 // DOM-01..DOM-05 • Reg 0xA00F",
+            codeSnippet = """
+                // STEELS // ODM STACK TOPOLOGY & ATLAS (RED) KNOWABILITY SENTINEL
+                // Center File-Line Thinking Spine: L0 (run_cmd.sh) -> L1 (Gate) -> L2 (RGB/FRQ Knowable) -> L3 (0x200F) -> L4 (Atlas RED)
+                pub const ODM_DOMAINS: [&str; 5] = ["DOM-01", "DOM-02", "DOM-03", "DOM-04", "DOM-05"];
+                pub const REGISTER_HYGIENE_MASK: u16 = 0x200F;
+                pub const PRE_EMISSION_GATE: &str = ">P:emission>tense-dylz";
+
+                pub fn evaluate_knowability_and_atlas_path(
+                    rgb_knowable: bool,
+                    frq_knowable: bool,
+                    check_pass_true_only: bool
+                ) -> &'static str {
+                    if !rgb_knowable || !frq_knowable || !check_pass_true_only {
+                        "AS_ATLAS_RED_ON_LOST_PATH"
+                    } else {
+                        "RGB_AND_FRQ_KNOWABLE_LOCKED"
+                    }
+                }
+            """.trimIndent()
         )
     )
 }
