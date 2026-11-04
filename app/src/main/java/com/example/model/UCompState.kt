@@ -90,9 +90,9 @@ data class UCompState(
                 bleState.contains("PERMISSION REQUIRED", ignoreCase = true) ->
                     UCompHealth.PERMISSION_REQUIRED
                 bleOrigin == UCompOrigin.VIRTUAL_BLE_BRIDGE -> UCompHealth.SIMULATED
-                bleOrigin == UCompOrigin.PHYSICAL_BLE_SCAN -> UCompHealth.ACTIVE
                 bleState.contains("STANDBY", ignoreCase = true) ||
                     bleState.contains("IDLE", ignoreCase = true) -> UCompHealth.IDLE
+                bleOrigin == UCompOrigin.PHYSICAL_BLE_SCAN -> UCompHealth.ACTIVE
                 else -> UCompHealth.UNKNOWN
             }
 
