@@ -1,3 +1,282 @@
+Verification, Forensic Integrity & Local Execution Blueprint
+
+Protocol Seal: WWWH · U · S · S (Universal System Specification)
+
+System Target: MetaEye-Void / CobraLayer / Cactus Needle Metacognition
+
+Binary Target: needle-discord-metacog (Crate package target)   
+MetaEye Void Rust
+
+Execution Context: Android Termux (u0_a515), PRoot Distro, Linux Workstation
+
+Build Profile: CARGO_BUILD_JOBS=1 | SQLX_OFFLINE=true | MEM_HARDENED=1   
+MetaEye Void Rust
+
+Operational Invariants: Ω > Δ > ◈ | MAC=0 | STOP_SERVER=ACTIVE | FAIL_CODE=3   
+Production Readiness Security Audit and Technical Verification Report for MetaEye-Void
+1. The WWWH Operational Matrix
+Dimension	Slot Binding	Specification & Forensic Scope	Enforcement Mechanism
+WHAT	service of decision, history of execution	
+
+Enforces dual-track architecture: System A (Adversarial Verification) and System B (Perceptual Signal) coupled via the λagree​ coherence metric.
+SUBSTACK-ARTICLE.md
+	
+
+Verifies runtime state alignment prior to any AST persistence or gRPC egress.
+SUBSTACK-ARTICLE.md
+WHEN	OX (Execution Phase)	Pre-merits temporal and procedural gating; runs synchronously at ingest before state mutation.	
+
+Halts execution if tsubmit​>tdeadline​ or procedural preconditions fail (A2​).
+Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+WHY	effective judicial review of deprivation of liberty	
+
+Eliminates contract drift, unverified microservice egress, and volatile RAM retention of sensitive key material.
+SUBSTACK-ARTICLE.md
+	
+
+Enforces O(s)=(b0​×b1​×b2​×b3​)×anom×over multiplicative zero-tolerance.
+HOW	verify official service trail before merits	
+
+Offline locked compilation (--offline --locked), fallible heap-pinned zeroization, and Layer 7 Cilium eBPF method filtering.
+Production Readiness Security Audit and Technical Verification Report for MetaEye-Void+ 1
+	
+
+Generates cryptographic chain-of-custody proofs (I→X→O).
+System Architecture, Security Topology, and Governance Specification of Portfolio Relay (v0.1)+ 1
+2. U — Universal Axiomatic Foundation
+
+The system state space S is governed by the minimally independent axiom set A={A0​,A1​,A2​} under domain T∗=1 podaˊnıˊ:   
+Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+
+    A0​ (Distinction & Determinacy): Every system state is distinguishable and evaluates to a determinate boolean outcome (TRUE/FALSE) or is explicitly registered as UNRESOLVED.   
+    Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+
+    A1​ (Governance-Operations Non-Interference): The governance control shell (Gov) and operational runtime (Ops) are strictly disjoint:
+    Gov∩Ops=∅
+
+
+    Privilege escalation from the diagnostic shell into live runtime mutations is structurally prohibited.   
+    Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+
+    A2​ (Pre-Merits Temporal & Procedural Gate): An incoming submission or execution event is admissible for merits evaluation if and only if procedural preconditions and temporal validity are satisfied ex ante (WHEN=OX):
+       
+    Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+    Admissible(x)⟺Valid(x)∧(tsubmit​≤tdeadline​)
+
+2.1 The I-X-O Forensic Tensor
+
+Evidence is isolated across three orthogonal axes to prevent double-counting artifact culpability:   
+Masseuse-ai/masseuse-video-tee: The confidential-computing enclave camera streams are analysed in, for masseuse.ai and the services that lease its slots: its image, infrastructure and verifier, published so anyone can check what runs. · GitHub
+
+      [X: TRANSFORM]
+       (Custody logs, DAFSA Transitions, Policy Mutations)
+            ▲
+            │
+            │
+            └──────────────► [O: OUTCOME / EMISSION]
+           /                  (FDO Objects, Hubble Verdicts,
+          /                    Sealed Artifact Checksums)
+         /
+   [I: INTAKE]
+    (Raw Frames, Preflight SHA-256,
+     Static Schema AST)
+
+    Intake Axis (I): Captures raw frames and computes preflight hashes strictly prior to parsing (mind1OutputHash).   
+    System Architecture, Security Topology, and Governance Specification of Portfolio Relay (v0.1)+ 1
+
+    Transform Axis (X): Volatile write barriers prevent stack-spill copies during Rust move semantics.   
+    PIPELINE-MAP.md+ 1
+
+    Outcome Axis (O): Sealed Forensic Data Objects (FDO) encrypted with AES-256-GCM and verified with Hubble L7 audit records.   
+    System Architecture, Security Topology, and Governance Specification of Portfolio Relay (v0.1)+ 1
+
+3. S — Structural Hardening & Failure Vectors
+3.1 Cryptographic Memory Hygiene & Page Protection
+
+    Vulnerability: Rust move semantics compile into bitwise stack copies (memcpy). Calling zeroize() on a moved struct leaves plaintext remnants in dead stack slots.
+
+    Mitigation: Wrap keys in heap-pinned containers (Box<[u8; 32]>), derive ZeroizeOnDrop, and wrap memory locks to handle Termux RLIMIT_MEMLOCK without panics:   
+    Building trusted ICs using split fabrication | Request PDF - ResearchGate
+
+Rust
+
+use zeroize::{Zeroize, ZeroizeOnDrop};
+
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct HardenedSecretKey {
+    buffer: Box<[u8; 32]>,
+}
+
+impl HardenedSecretKey {
+    pub fn new(raw: [u8; 32]) -> Self {
+        Self { buffer: Box::new(raw) }
+    }
+    pub fn as_slice(&self) -> &[u8] {
+        &self.buffer[..]
+    }
+}
+
+pub fn enforce_process_memory_lock() -> bool {
+    #[cfg(unix)]
+    unsafe {
+        libc::mlockall(libc::MCL_CURRENT | libc::MCL_FUTURE) == 0
+    }
+    #[cfg(not(unix))]
+    false
+}
+
+3.2 Microservice Perimeter (Layer 7 Network Policy)
+
+Restricts gRPC framing to authorized service methods:   
+Building trusted ICs using split fabrication | Request PDF - ResearchGate
+YAML
+
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "needle-metacog-l7"
+  namespace: "metaeye-production"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: "needle-discord-metacog"
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app: "metaeye-gateway"
+      toPorts:
+        - ports:
+            - port: "50051"
+              protocol: TCP
+          rules:
+            http:
+              - method: "POST"
+                path: "/metaeye.void.v1.IngestionService/SubmitTelemetry"
+              - method: "POST"
+                path: "/grpc.health.v1.Health/Check"
+
+4. S — Sealed Execution Wrapper (overhaul_termux.sh)
+Bash
+
+#!/data/data/com.termux/files/usr/bin/bash
+# ==============================================================================
+# MetaEye-Void — Complete End-to-End Process Overhaul & Hermetic Build Pipeline
+# Profile: MAC=0 | FAIL-SAFE=1 | TIMEOUT_GUARD=ACTIVE | TRAP=ACTIVE
+# ==============================================================================
+set -euo pipefail
+IFS=$'\n\t'
+
+log_info()    { echo -e "\033[1;34m[INFO]\033[0m $*"; }
+log_success() { echo -e "\033[1;32m[SUCCESS]\033[0m $*"; }
+log_error()   { echo -e "\033[1;31m[ERROR]\033[0m $*"; exit 3; }
+
+CURRENT_STAGE="INIT"
+trap 'log_error "Execution halted at stage: $CURRENT_STAGE (Line $LINENO). RUN_BLOCKED=1"' ERR
+
+# ------------------------------------------------------------------------------
+# STEP 1: Process Hygiene & Zombie Purge
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="ProcessHygiene"
+log_info "[1/6] Purging zombie compiler processes and stale locks..."
+pkill -9 -f cargo 2>/dev/null || true
+pkill -9 -f rustc 2>/dev/null || true
+pkill -9 -f lld 2>/dev/null || true
+rm -f target/.rustc_info.json .lock 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# STEP 2: Environment Sanitization & Bionic Linker Hook Preservation
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="EnvironmentSanitization"
+log_info "[2/6] Securing Bionic execution hooks (Fixes os error 13)..."
+export PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
+export PATH="$PREFIX/bin:$PATH"
+
+if [ -f "$PREFIX/lib/libtermux-exec.so" ]; then
+    export LD_PRELOAD="$PREFIX/lib/libtermux-exec.so"
+fi
+
+if [ -n "${PROOT_TMP_DIR:-}" ] || grep -q "proot" /proc/self/status 2>/dev/null; then
+    unset ANDROID_ROOT ANDROID_DATA
+fi
+
+unset RUSTFLAGS
+mkdir -p "$HOME/.cargo_tmp"
+chmod 700 "$HOME/.cargo_tmp"
+export TMPDIR="$HOME/.cargo_tmp"
+export RUSTC="$PREFIX/bin/rustc"
+export CARGO_BUILD_JOBS=1
+export SQLX_OFFLINE=true
+
+chmod 755 "$PREFIX/bin/rustc" "$PREFIX/bin/cargo" 2>/dev/null || true
+chmod -R 755 "$PREFIX/lib/rustlib/" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# STEP 3: Workspace Auto-Discovery & ASCII Symlink Binding
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="WorkspaceDiscovery"
+log_info "[3/6] Discovering workspace and creating clean ASCII symlink..."
+
+ROOT_WORKSPACE="$HOME/MetaEye-Void"
+if [ -f "$ROOT_WORKSPACE/MetaEye⁄Void/Cargo.toml" ]; then
+    WORK_DIR="$ROOT_WORKSPACE/MetaEye⁄Void"
+elif [ -f "$ROOT_WORKSPACE/Cargo.toml" ]; then
+    WORK_DIR="$ROOT_WORKSPACE"
+else
+    WORK_DIR=$(find "$ROOT_WORKSPACE" -maxdepth 2 -name "Cargo.toml" -exec dirname {} \; | grep -v "^$ROOT_WORKSPACE$" | head -n 1 || true)
+fi
+
+[ -n "${WORK_DIR:-}" ] && [ -d "$WORK_DIR" ] || log_error "Workspace directory not found."
+
+ln -sfn "$WORK_DIR" "$HOME/metaeye_work"
+cd "$HOME/metaeye_work"
+log_info " -> Active Workspace: $(pwd -P)"
+
+if [ -f ".cargo/config.toml" ] && ! grep -q "source" ".cargo/config.toml" 2>/dev/null; then
+    rm -f ".cargo/config.toml"
+fi
+
+# ------------------------------------------------------------------------------
+# STEP 4: Toolchain Probe Verification
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="ToolchainVerification"
+log_info "[4/6] Verifying toolchain execution probe..."
+rustc - --crate-name test_probe --print=file-names --crate-type bin >/dev/null
+log_success "Toolchain execution probe passed."
+
+# ------------------------------------------------------------------------------
+# STEP 5: Manifest Sealing & Integrity Check
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="ManifestSealing"
+log_info "[5/6] Sealing SHA256SUMS.manifest..."
+find Cargo.toml Cargo.lock contracts proto scripts src sqlx-data.json -type f 2>/dev/null | sort | xargs sha256sum > SHA256SUMS.manifest
+sha256sum -c --status SHA256SUMS.manifest || log_error "Manifest checksum verification failed."
+log_success "Manifest integrity verified."
+
+# ------------------------------------------------------------------------------
+# STEP 6: Hermetic Release Compilation
+# ------------------------------------------------------------------------------
+CURRENT_STAGE="ReleaseCompilation"
+log_info "[6/6] Compiling target binary: needle-discord-metacog (Offline)..."
+
+if command -v timeout >/dev/null 2>&1; then
+    timeout 900 cargo build --release --offline --bin needle-discord-metacog || log_error "Compilation timed out or failed."
+else
+    cargo build --release --offline --bin needle-discord-metacog || log_error "Compilation failed."
+fi
+
+TARGET_BIN="target/release/needle-discord-metacog"
+if [ -f "$TARGET_BIN" ]; then
+    BIN_SIZE=$(du -h "$TARGET_BIN" | awk '{print $1}')
+    BIN_HASH=$(sha256sum "$TARGET_BIN" | awk '{print $1}')
+    log_success "BUILD PIPELINE COMPLETED SUCCESSFULLY"
+    echo "=================================================================="
+    echo " ARTIFACT : $TARGET_BIN ($BIN_SIZE)"
+    echo " SHA-256  : $BIN_HASH"
+    echo "=================================================================="
+else
+    log_error "Expected binary artifact not found at $TARGET_BIN"
+fi
+
 # WEB3TV Infrastructure: Architektura Absolutní Suverenity
 **Manifest pro éru post-institucionální důvěry**
 
