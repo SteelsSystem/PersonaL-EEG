@@ -60,3 +60,37 @@ Aplikace striktně odmítá cloud. Služba `LocalOnlyPathsInterconnectService` n
 V modulu `GlobalVsPersonalDeployService.kt` je natvrdo zakódováno:
 ```kotlin
 val recurringSubscriptionFeeUsd = 0.00f // NOSUBS! Lock
+
+As of:
+(use zeroize::{Zeroize, ZeroizeOnDrop};
+
+/// Hardened secret container that pins memory to the heap to mitigate
+/// move-semantics stack copying and zeroizes memory on drop.
+#[derive(Zeroize, ZeroizeOnDrop)]
+pub struct HardenedSecretKey {
+    buffer: Box<[u8; 32]>,
+}
+
+impl HardenedSecretKey {
+    pub fn new(raw: [u8; 32]) -> Self {
+        Self {
+            buffer: Box::new(raw),
+        }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        &self.buffer[..]
+    }
+}
+
+/// Fallible memory lock supporting Android Termux RLIMIT_MEMLOCK restrictions
+pub fn enforce_process_memory_lock() -> bool {
+    #[cfg(unix)]
+    unsafe {
+        if libc::mlockall(libc::MCL_CURRENT | libc::MCL_FUTURE) == 0 {
+            return true;
+        }
+    }
+    false
+}
+)
