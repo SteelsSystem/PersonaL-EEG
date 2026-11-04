@@ -304,7 +304,22 @@ data class AxiomUiState(
     val showEmbeddedHtmlProfilerModal: Boolean = false,
     val toastMessage: String? = null,
     val healLogs: List<HealLogEntry> = emptyList()
-)
+) {
+    /**
+     * Single automatically derived component view. All four domains are projected
+     * from this immutable UI snapshot; no parallel mutable UComp store is maintained.
+     */
+    val uComp: com.example.model.UCompState
+        get() = com.example.model.UCompState.from(
+            eegBands = eegBands,
+            dominantFrequencyHz = dominantFrequencyHz,
+            phaseCoherencePct = phaseCoherencePct,
+            cognitiveLoadPct = cognitiveLoadPct,
+            hardware = hardwareTelemetry,
+            installPlan = forwardTunnelParse,
+            unicritic = unicriticEvaluation
+        )
+}
 
 class AxiomViewModel(
     private val repository: SpectRepository,
